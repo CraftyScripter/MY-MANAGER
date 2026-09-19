@@ -1,0 +1,332 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+html,
+body {
+  overscroll-behavior: none;
+  scroll-behavior: auto;
+}
+
+:root {
+  --background: #f8fafc;
+  --foreground: #0f172a;
+  --card: #ffffff;
+  --card-foreground: #0f172a;
+  --sidebar: #ffffff;
+  --sidebar-border: #e2e8f0;
+  --border: #e2e8f0;
+  --input: #ffffff;
+  --ring: #3b82f6;
+}
+
+html.dark {
+  --background: #09090b;
+  --foreground: #f4f4f5;
+  --card: #111114;
+  --card-foreground: #f4f4f5;
+  --sidebar: #09090b;
+  --sidebar-border: #27272a;
+  --border: #27272a;
+  --input: #18181b;
+  --ring: #3b82f6;
+}
+
+html.light {
+  --background: #f8fafc;
+  --foreground: #0f172a;
+  --card: #ffffff;
+  --card-foreground: #0f172a;
+  --sidebar: #ffffff;
+  --sidebar-border: #e2e8f0;
+  --border: #e2e8f0;
+  --input: #ffffff;
+  --ring: #3b82f6;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-geist-sans), system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+button,
+[role="button"],
+select,
+a {
+  cursor: pointer;
+}
+
+/* ==========================================================================
+   DARK MODE — SOLID COLOR OVERRIDES
+   Replace every alpha/translucent class with a fully-opaque equivalent.
+   Alpha compositing requires the GPU to read and blend multiple layers on
+   every frame — eliminating it is the single biggest scroll perf win.
+   ========================================================================== */
+
+/* ── Backgrounds with alpha channel → solid equivalents ── */
+
+/* /50 /60 /70 /80 variants of zinc-900 → solid #111114 */
+html.dark .bg-zinc-900\/50,
+html.dark .bg-zinc-900\/60,
+html.dark .bg-zinc-900\/70,
+html.dark .bg-zinc-900\/80,
+html.dark .bg-zinc-900\/90 { background-color: #111114 !important; }
+
+/* /40 /50 /60 /70 /80 variants of zinc-800 → solid #1c1c1f */
+html.dark .bg-zinc-800\/40,
+html.dark .bg-zinc-800\/50,
+html.dark .bg-zinc-800\/60,
+html.dark .bg-zinc-800\/70,
+html.dark .bg-zinc-800\/80 { background-color: #1c1c1f !important; }
+
+/* /50 variants of zinc-700 */
+html.dark .bg-zinc-700\/50,
+html.dark .bg-zinc-700\/60 { background-color: #27272a !important; }
+
+/* Modal backdrop overlays (modals) */
+html.dark .bg-black\/80,
+html.dark .bg-black\/70,
+html.dark .bg-black\/60 { background-color: rgba(0, 0, 0, 0.75) !important; }
+
+/* White with alpha (active nav items etc.) */
+html.dark .bg-white\/10,
+html.dark .bg-white\/15,
+html.dark .bg-white\/20 { background-color: #1e1e22 !important; }
+
+/* slate/50 hover rows in dark */
+html.dark .hover\:bg-slate-50\/80:hover,
+html.dark .hover\:bg-zinc-800\/20:hover { background-color: #17171a !important; }
+
+/* zinc-800/30 selected rows */
+html.dark .bg-zinc-800\/30 { background-color: #1a1a1e !important; }
+
+/* blue-50/50 selected rows in dark */
+html.dark .bg-blue-50\/50 { background-color: #17172a !important; }
+
+/* focus ring alpha */
+html.dark .focus\:ring-blue-500\/20:focus { --tw-ring-color: #1e3a5f; }
+html.dark .focus\:ring-zinc-700:focus     { --tw-ring-color: #3f3f46; }
+
+/* ==========================================================================
+   LIGHT MODE — SOLID COLOR OVERRIDES
+   ========================================================================== */
+
+/* Main layout and root background */
+html.light .bg-\[\#09090b\],
+html.light .bg-\[\#050507\],
+html.light .bg-black { background-color: #f8fafc !important; }
+
+/* Sidebar and elevated cards */
+html.light aside,
+html.light .bg-zinc-950,
+html.light .bg-zinc-950\/50,
+html.light .bg-zinc-950\/70,
+html.light .bg-zinc-950\/80,
+html.light .bg-\[\#121216\],
+html.light .bg-\[\#111115\],
+html.light .bg-\[\#131316\],
+html.light .bg-\[\#16161a\],
+html.light .bg-\[\#111114\],
+html.light .bg-\[\#18181b\] { background-color: #ffffff !important; }
+
+/* Secondary cards */
+html.light div.bg-zinc-900,
+html.light section.bg-zinc-900,
+html.light aside.bg-zinc-900,
+html.light main.bg-zinc-900,
+html.light .bg-zinc-900:not(button):not(a):not([role="button"]):not(.btn-primary),
+html.light .bg-zinc-900\/50,
+html.light .bg-zinc-900\/60,
+html.light .bg-zinc-900\/70,
+html.light .bg-zinc-900\/80,
+html.light .bg-zinc-900\/90 {
+  background-color: #ffffff !important;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
+}
+
+/* Tertiary pills, chip badges */
+html.light .bg-zinc-800:not(button):not(a):not([role="button"]):not(.btn-primary),
+html.light .bg-zinc-800\/40,
+html.light .bg-zinc-800\/50,
+html.light .bg-zinc-800\/60,
+html.light .bg-zinc-800\/70,
+html.light .bg-zinc-800\/80 { background-color: #f1f5f9 !important; }
+
+/* Hover surfaces */
+html.light .hover\:bg-zinc-800:hover:not(button):not(a):not([role="button"]):not(.btn-primary),
+html.light .hover\:bg-zinc-800\/30:hover,
+html.light .hover\:bg-zinc-800\/40:hover,
+html.light .hover\:bg-zinc-800\/50:hover,
+html.light .hover\:bg-zinc-900:hover:not(button):not(a):not([role="button"]):not(.btn-primary),
+html.light .hover\:bg-zinc-900\/50:hover,
+html.light .hover\:bg-zinc-900\/60:hover,
+html.light .hover\:bg-zinc-950:hover { background-color: #f1f5f9 !important; }
+
+/* Modal overlays in light mode */
+html.light .bg-black\/80,
+html.light .bg-black\/70,
+html.light .bg-black\/60 { background-color: rgba(0,0,0,0.55) !important; }
+
+
+/* hover rows */
+html.light .hover\:bg-zinc-700:hover,
+html.light .hover\:bg-zinc-700\/80:hover { background-color: #e2e8f0 !important; }
+
+/* Active nav */
+html.light .bg-white\/10,
+html.light .bg-white\/15,
+html.light .bg-white\/20 { background-color: #eff6ff !important; color: #1d4ed8 !important; }
+
+/* Borders */
+html.light .border-zinc-800,
+html.light .border-zinc-800\/50,
+html.light .border-zinc-800\/60,
+html.light .border-zinc-800\/70,
+html.light .border-zinc-800\/80,
+html.light .border-zinc-700,
+html.light .border-zinc-700\/50,
+html.light .border-zinc-700\/60,
+html.light .border-zinc-700\/70,
+html.light .border-zinc-700\/80,
+html.light .border-white\/10,
+html.light .border-white\/15 { border-color: #e2e8f0 !important; }
+
+/* Text */
+html.light *:not([class*="bg-blue"]):not([class*="bg-indigo"]):not([class*="bg-emerald"]):not([class*="bg-green"]):not([class*="bg-red"]):not([class*="bg-amber"]):not([class*="bg-rose"]):not([class*="bg-purple"]):not([class*="text-emerald"]):not([class*="text-red"]):not([class*="text-amber"]):not([class*="text-blue"]):not([class*="text-indigo"]):not([class*="text-purple"]):not([class*="text-rose"]):not(.btn-primary):not([class*="btn-primary"]) > .text-white,
+html.light h1.text-white,
+html.light h2.text-white,
+html.light h3.text-white,
+html.light h4.text-white,
+html.light p.text-white,
+html.light span.text-white:not([class*="bg-"]):not([class*="badge"]):not(.btn-primary *),
+html.light div.text-white:not([class*="bg-"]):not(.btn-primary *) { color: #0f172a !important; }
+
+html.light .text-zinc-100,
+html.light .text-zinc-200,
+html.light .text-zinc-300 { color: #1e293b !important; }
+
+html.light .text-zinc-400,
+html.light .text-zinc-500 { color: #64748b !important; }
+
+html.light .hover\:text-white:hover,
+html.light .hover\:text-zinc-100:hover,
+html.light .hover\:text-zinc-200:hover,
+html.light .hover\:text-zinc-300:hover { color: #0f172a !important; }
+
+/* Inputs */
+html.light input:not([type="submit"]):not([type="button"]):not([type="checkbox"]):not([type="radio"]),
+html.light textarea,
+html.light select {
+  background-color: #ffffff !important;
+  border-color: #cbd5e1 !important;
+  color: #0f172a !important;
+}
+
+html.light input::placeholder,
+html.light textarea::placeholder { color: #94a3b8 !important; }
+
+/* Tables */
+html.light table  { background-color: #ffffff !important; }
+html.light th     { background-color: #f8fafc !important; color: #475569 !important; border-color: #e2e8f0 !important; }
+html.light td     { border-color: #e2e8f0 !important; color: #0f172a !important; }
+html.light tr:hover td { background-color: #f8fafc !important; }
+
+/* ==========================================================================
+   PRIMARY ACTION BUTTONS
+   ========================================================================== */
+.btn-primary {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-weight: 600 !important;
+  border-radius: 0.75rem !important;
+  transition: background-color 0.1s, border-color 0.1s !important;
+  cursor: pointer !important;
+  /* Solid 1px border instead of expensive box-shadow */
+  box-shadow: none !important;
+}
+
+html.light .btn-primary,
+.btn-primary {
+  background-color: #09090b !important;
+  color: #ffffff !important;
+  border: 1px solid #09090b !important;
+}
+
+html.light .btn-primary:hover,
+.btn-primary:hover {
+  background-color: #27272a !important;
+  border-color: #27272a !important;
+  color: #ffffff !important;
+}
+
+html.light .btn-primary svg,
+.btn-primary svg { color: #ffffff !important; stroke: #ffffff !important; }
+
+html.dark .btn-primary {
+  background-color: #ffffff !important;
+  color: #09090b !important;
+  border: 1px solid #e4e4e7 !important;
+  /* No glow shadow — too expensive */
+  box-shadow: none !important;
+}
+
+html.dark .btn-primary:hover {
+  background-color: #e4e4e7 !important;
+  border-color: #e4e4e7 !important;
+  color: #09090b !important;
+}
+
+html.dark .btn-primary svg { color: #09090b !important; stroke: #09090b !important; }
+
+/* ==========================================================================
+   CUSTOM SCROLLBARS — thin, solid, no blur
+   ========================================================================== */
+.scrollbar-thin {
+  -webkit-overflow-scrolling: touch;
+}
+
+.scrollbar-thin::-webkit-scrollbar { height: 5px; width: 5px; }
+.scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
+
+html.dark .scrollbar-thin::-webkit-scrollbar-thumb  { background: #3f3f46; border-radius: 3px; }
+html.dark .scrollbar-thin::-webkit-scrollbar-thumb:hover { background: #52525b; }
+
+html.light .scrollbar-thin::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+html.light .scrollbar-thin::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+/* ==========================================================================
+   ADMIN SCROLL CONTAINER
+   Single scroll container in <main>; pages do NOT scroll independently.
+   CRITICAL: Never add transform: translateZ(0) or contain: layout here!
+   Those CSS properties create a new containing block that breaks fixed-position
+   descendants (modals, dropdowns, tooltips), trapping them inside <main>.
+   ========================================================================== */
+.admin-scroll {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+  scroll-behavior: smooth;
+}
+
+/* GPU-accelerated transitions: only transform/opacity, never layout props */
+.gpu-transition {
+  will-change: transform, opacity;
+  transform: translateZ(0);
+  transition: transform 0.15s, opacity 0.15s !important;
+}
+
+/* 144Hz Smooth Table Performance: zero transition delays on table cells during scroll */
+.perf-table tr,
+.perf-table td,
+.perf-table th {
+  transition: none !important;
+}
+

@@ -1,0 +1,462 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+model ContactEnquiry {
+  id           String    @id @default(cuid()) @map("_id")
+  name         String
+  email        String
+  message      String
+  platform     String
+  phone        String?
+  subject      String?
+  replied      Boolean   @default(false)
+  replyMessage String?
+  seen         Boolean   @default(false)
+  seenAt       DateTime?
+  emailVerified Boolean?  @default(false)
+  emailMx       String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([platform])
+  @@index([replied])
+  @@index([seen])
+  @@index([createdAt])
+}
+
+model LeadFolder {
+  id          String   @id @default(cuid()) @map("_id")
+  name        String
+  color       String?
+  parentId    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  parent   LeadFolder? @relation("FolderTree", fields: [parentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  children LeadFolder[] @relation("FolderTree")
+  files    LeadFile[]
+
+  @@index([parentId])
+  @@index([name])
+  @@index([createdAt])
+}
+
+model LeadFile {
+  id          String   @id @default(cuid()) @map("_id")
+  folderId    String?
+  name        String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  folder  LeadFolder?   @relation(fields: [folderId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  tabs    LeadTab[]
+  columns LeadColumn[]
+
+  @@index([folderId])
+  @@index([name])
+  @@index([createdAt])
+}
+
+model LeadColumn {
+  id        String   @id @default(cuid()) @map("_id")
+  fileId    String
+  name      String
+  type      String   @default("text")
+  options   String?
+  sortOrder Int      @default(0)
+  width     Int?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  file LeadFile @relation(fields: [fileId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([fileId])
+  @@index([sortOrder])
+}
+
+model LeadTab {
+  id          String   @id @default(cuid()) @map("_id")
+  fileId      String
+  name        String
+  sortOrder   Int      @default(0)
+  mergedCells Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  file  LeadFile @relation(fields: [fileId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  leads Lead[]
+
+  @@index([fileId])
+  @@index([createdAt])
+}
+
+model Lead {
+  id           String   @id @default(cuid()) @map("_id")
+  tabId        String
+  businessName String
+  phone        String?
+  email        String?
+  address      String?
+  website      String?
+  category     String?
+  rating       Float?
+  reviews      Int?
+  sourceUrl    String?
+  status       String   @default("new")
+  notes        String?
+  customFields Json?
+  importedAt   DateTime @default(now())
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  tab LeadTab @relation(fields: [tabId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([tabId])
+  @@index([status])
+  @@index([category])
+  @@index([businessName])
+  @@index([createdAt])
+}
+
+model SheetComment {
+  id        String   @id @default(cuid()) @map("_id")
+  fileId    String
+  tabId     String?
+  userId    String
+  userName  String
+  userEmail String
+  userRole  String
+  message   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([fileId])
+  @@index([tabId])
+  @@index([createdAt])
+}
+
+model Credential {
+  id          String   @id @default(cuid()) @map("_id")
+  accountName String
+  category    String
+  username    String
+  password    String
+  accountUrl  String?
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  links CredentialLink[]
+
+  @@index([category])
+  @@index([createdAt])
+}
+
+model CredentialLink {
+  id           String     @id @default(cuid()) @map("_id")
+  credentialId String
+  title        String
+  url          String
+  credential   Credential @relation(fields: [credentialId], references: [id], onDelete: Cascade)
+
+  @@index([credentialId])
+}
+
+model Payment {
+  id              String   @id @default(cuid()) @map("_id")
+  transactionId   String   @unique
+  date            DateTime
+  type            String
+  amount          String
+  currency        String   @default("INR")
+  status          String
+  paymentMethod   String?
+  paidBy          String?
+  paidTo          String?
+  purposeCategory String?
+  description     String?
+  referenceNumber String?
+  receiptUrl      String?
+  receiptPublicId String?
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([type])
+  @@index([status])
+  @@index([date])
+  @@index([createdAt])
+}
+
+model PaymentAuditLog {
+  id        String   @id @default(cuid()) @map("_id")
+  paymentId String
+  action    String
+  adminUser String
+  details   String?
+  createdAt DateTime @default(now())
+
+  @@index([paymentId])
+  @@index([createdAt])
+}
+
+model PromiseMeEnquiry {
+  id                           String    @id @default(cuid()) @map("_id")
+  whatAreYouLookingToBuild     String[]
+  name                         String
+  email                        String
+  phoneWhatsapp                String
+  company                      String
+  projectDetailsOrRequirement  String
+  replied                      Boolean   @default(false)
+  replyMessage                 String?
+  seen                         Boolean   @default(false)
+  seenAt                       DateTime?
+  createdAt                    DateTime  @default(now())
+  updatedAt                    DateTime  @updatedAt
+
+  @@index([replied])
+  @@index([seen])
+  @@index([createdAt])
+}
+
+model DashboardSnapshot {
+  id                   String   @id @default("default") @map("_id")
+  lastUpdated          DateTime @default(now())
+  totalEnquiries       Int      @default(0)
+  repliedEnquiries     Int      @default(0)
+  pendingEnquiries     Int      @default(0)
+  seenEnquiries        Int      @default(0)
+  replyRate            Int      @default(0)
+  seenRate             Int      @default(0)
+  platformDistribution String   @default("[]")
+  dailyData            String   @default("[]")
+  totalCredentials     Int      @default(0)
+  totalIncome          Float    @default(0)
+  totalExpenses        Float    @default(0)
+  totalRefunds         Float    @default(0)
+  netBalance           Float    @default(0)
+  pendingAmount        Float    @default(0)
+}
+
+model EnvProject {
+  id          String   @id @default(cuid()) @map("_id")
+  name        String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  environments Environment[]
+
+  @@index([name])
+  @@index([createdAt])
+}
+
+model Environment {
+  id        String   @id @default(cuid()) @map("_id")
+  projectId String
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  project   EnvProject           @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  variables EnvironmentVariable[]
+
+  @@index([projectId])
+  @@index([createdAt])
+}
+
+model EnvironmentVariable {
+  id            String   @id @default(cuid()) @map("_id")
+  environmentId String
+  key           String
+  value         String
+  description   String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  environment Environment @relation(fields: [environmentId], references: [id], onDelete: Cascade)
+
+  @@index([environmentId])
+  @@index([key])
+  @@index([createdAt])
+}
+
+model EnvAuditLog {
+  id            String   @id @default(cuid()) @map("_id")
+  variableId    String?
+  environmentId String?
+  projectId     String?
+  action        String
+  adminUser     String
+  details       String?
+  createdAt     DateTime @default(now())
+
+  @@index([variableId])
+  @@index([environmentId])
+  @@index([projectId])
+  @@index([createdAt])
+}
+
+model User {
+  id                String    @id @default(cuid()) @map("_id")
+  name              String
+  email             String    @unique
+  phone             String?
+  passwordHash      String?
+  role              String    @default("member")
+  permissions       String[]  @default([])
+  isActive          Boolean   @default(false)
+  invitationToken   String?
+  invitationExpires DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@index([role])
+  @@index([invitationToken])
+}
+
+model ActivityLog {
+  id        String   @id @default(cuid()) @map("_id")
+  action    String
+  userEmail String
+  userName  String?
+  section   String
+  details   String?
+  ipAddress String?
+  createdAt DateTime @default(now())
+
+  @@index([section])
+  @@index([userEmail])
+  @@index([createdAt])
+}
+
+model InstagramAccount {
+  id                String    @id @default(cuid()) @map("_id")
+  userId            String    @default("admin")
+  instagramId       String    @unique
+  username          String
+  name              String?
+  profilePictureUrl String?
+  accessToken       String
+  tokenExpiresAt    DateTime?
+  pageId            String?
+  pageName          String?
+  accountType       String?
+  biography         String?
+  website           String?
+  followersCount    Int?      @default(0)
+  followsCount      Int?      @default(0)
+  mediaCount        Int?      @default(0)
+  connectedAt       DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  posts             InstagramPostLog[]
+
+  @@index([userId])
+}
+
+model InstagramPostLog {
+  id                 String            @id @default(cuid()) @map("_id")
+  instagramAccountId String
+  mediaId            String?
+  caption            String?
+  mediaUrl           String
+  mediaType          String            @default("IMAGE")
+  permalink          String?
+  status             String            @default("published") // published, scheduled, failed, draft
+  scheduledFor       DateTime?
+  publishedBy        String?
+  publishedAt        DateTime?
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+
+  account            InstagramAccount  @relation(fields: [instagramAccountId], references: [id], onDelete: Cascade)
+
+  @@index([instagramAccountId])
+  @@index([status])
+  @@index([scheduledFor])
+  @@index([createdAt])
+}
+
+model GoogleAccount {
+  id              String    @id @default(cuid()) @map("_id")
+  userId          String    @default("admin")
+  googleId        String    @unique
+  email           String
+  name            String?
+  picture         String?
+  accessToken     String
+  refreshToken    String?
+  tokenExpiresAt  DateTime?
+  scope           String?
+  driveFolderId   String?
+  driveFolderName String?   @default("MyManager_AppData")
+  lastBackupAt    DateTime?
+  lastSyncAt      DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([email])
+}
+
+
+model GoogleSheetLink {
+  id              String    @id @default(cuid()) @map("_id")
+  userId          String    @default("admin")
+  fileId          String?
+  tabId           String?
+  spreadsheetId   String
+  spreadsheetName String?
+  sheetName       String?   @default("Sheet1")
+  sheetUrl        String
+  columnMapping   Json?
+  lastSyncedAt    DateTime?
+  syncStatus      String    @default("idle")
+  lastError       String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([fileId])
+  @@index([tabId])
+  @@index([spreadsheetId])
+}
+
+model Appointment {
+  id               String    @id @default(cuid()) @map("_id")
+  workspaceAdminId String    @default("admin")
+  title            String
+  description      String?
+  clientName       String
+  clientEmail      String
+  clientPhone      String?
+  startTime        DateTime
+  endTime          DateTime
+  durationMinutes  Int       @default(30)
+  timeZone         String    @default("UTC")
+  status           String    @default("confirmed") // confirmed, cancelled, completed, rescheduled
+  meetLink         String?
+  googleEventId    String?
+  notes            String?
+  bookedByRole     String    @default("client") // client, team_member, admin
+  bookedByEmail    String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@index([workspaceAdminId])
+  @@index([startTime])
+  @@index([clientEmail])
+  @@index([status])
+  @@index([createdAt])
+}
+
+
