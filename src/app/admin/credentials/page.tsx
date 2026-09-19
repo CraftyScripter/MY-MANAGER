@@ -552,22 +552,25 @@ export default function CredentialsPage() {
                 {/* Center: Rows per page selector */}
                 <div className="flex items-center gap-2 text-xs text-zinc-600 dark:text-zinc-400">
                   <span>Rows per page:</span>
-                  <select
-                    value={pageSize}
-                    onChange={(e) => {
-                      const newSize = Number(e.target.value);
-                      setPageSize(newSize);
+                  <DropdownSelect
+                    value={String(pageSize)}
+                    onChange={(val) => {
+                      setPageSize(Number(val));
                       setPage(1);
                       scrollToTop();
                     }}
-                    className="bg-white dark:bg-[#18181b] border border-zinc-300 dark:border-[#27272a] text-zinc-800 dark:text-zinc-200 rounded-lg px-2 py-1 text-xs font-semibold focus:outline-none cursor-pointer"
-                  >
-                    <option value={5}>5</option>
-                    <option value={10}>10</option>
-                    <option value={15}>15</option>
-                    <option value={20}>20</option>
-                    <option value={50}>50</option>
-                  </select>
+                    options={[
+                      { label: "5", value: "5" },
+                      { label: "10", value: "10" },
+                      { label: "15", value: "15" },
+                      { label: "20", value: "20" },
+                      { label: "50", value: "50" },
+                    ]}
+                    size="sm"
+                    direction="up"
+                    minWidth="70px"
+                    className="w-16"
+                  />
                 </div>
 
                 {/* Right: Page Navigation Buttons */}
@@ -607,8 +610,8 @@ export default function CredentialsPage() {
                             onClick={() => { setPage(item); scrollToTop(); }}
                             className={`w-7 h-7 text-xs font-semibold rounded-lg cursor-pointer transition-colors ${
                               page === item
-                                ? "bg-zinc-800 text-zinc-100 border border-zinc-700/50 shadow-xs"
-                                : "text-zinc-400 hover:text-white bg-zinc-900 hover:bg-zinc-800 border border-zinc-800"
+                                ? "bg-blue-600 text-white font-bold shadow-xs border border-blue-600"
+                                : "text-zinc-700 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white bg-white dark:bg-zinc-900 hover:bg-zinc-100 dark:hover:bg-zinc-800 border border-zinc-200 dark:border-zinc-800"
                             }`}
                           >
                             {item}

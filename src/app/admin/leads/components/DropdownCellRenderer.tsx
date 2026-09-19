@@ -210,7 +210,7 @@ const DropdownEditor: React.FC<{
             zIndex: 999999,
             filter: "drop-shadow(0 15px 25px rgba(0,0,0,0.9))",
           }}
-          className={`bg-[#18181b] border border-zinc-700 shadow-2xl max-h-[220px] overflow-y-auto py-0.5 animate-in fade-in zoom-in-95 duration-75 ${
+          className={`bg-white dark:bg-[#18181b] border border-zinc-200 dark:border-zinc-700 shadow-2xl max-h-[220px] overflow-y-auto py-0.5 animate-in fade-in zoom-in-95 duration-75 ${
             menuDirection === "up" ? "rounded-t border-b-0" : "rounded-b border-t-0"
           }`}
         >
@@ -221,15 +221,15 @@ const DropdownEditor: React.FC<{
               e.stopPropagation();
               handleSelect("");
             }}
-            className={`px-3 py-1.5 text-xs text-zinc-400 italic hover:bg-blue-600 hover:text-white cursor-pointer transition select-none flex items-center justify-between ${
-              !currentVal || highlightedIndex === 0 ? "bg-zinc-800 text-zinc-200" : ""
+            className={`px-3 py-1.5 text-xs text-zinc-500 dark:text-zinc-400 italic hover:bg-blue-600 hover:text-white cursor-pointer transition select-none flex items-center justify-between ${
+              !currentVal || highlightedIndex === 0 ? "bg-blue-50 text-blue-700 dark:bg-zinc-800 dark:text-zinc-200" : ""
             }`}
           >
             <span>-- Empty --</span>
-            {!currentVal && <span className="text-blue-400 text-[10px]">✓</span>}
+            {!currentVal && <span className="text-blue-500 text-[10px]">✓</span>}
           </div>
 
-          <div className="border-t border-zinc-800 my-0.5" />
+          <div className="border-t border-zinc-200 dark:border-zinc-800 my-0.5" />
 
           {/* Options List */}
           {(data.options || []).map((opt, i) => {
@@ -246,12 +246,12 @@ const DropdownEditor: React.FC<{
                   e.stopPropagation();
                   handleSelect(val);
                 }}
-                className={`px-3 py-1.5 text-xs text-zinc-200 hover:bg-blue-600 hover:text-white cursor-pointer transition select-none flex items-center justify-between ${
-                  isSelected ? "bg-blue-600/30 text-white font-medium" : isHighlighted ? "bg-zinc-800 text-white" : ""
+                className={`px-3 py-1.5 text-xs text-zinc-800 dark:text-zinc-200 hover:bg-blue-600 hover:text-white cursor-pointer transition select-none flex items-center justify-between ${
+                  isSelected ? "bg-blue-50 text-blue-700 dark:bg-blue-600/30 dark:text-white font-medium" : isHighlighted ? "bg-zinc-100 text-zinc-900 dark:bg-zinc-800 dark:text-white" : ""
                 }`}
               >
                 <span className="truncate">{label}</span>
-                {isSelected && <span className="text-blue-400 text-[10px] ml-2 font-bold">✓</span>}
+                {isSelected && <span className="text-blue-500 text-[10px] ml-2 font-bold">✓</span>}
               </div>
             );
           })}

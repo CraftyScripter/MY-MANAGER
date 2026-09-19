@@ -253,8 +253,8 @@ export default function ActivityLogPage() {
               }}
               className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all duration-150 cursor-pointer shrink-0 ${
                 sectionFilter === sec.id
-                  ? "bg-zinc-800 text-zinc-100 font-semibold shadow-xs border border-zinc-700/50"
-                  : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/60"
+                  ? "bg-white text-zinc-900 shadow-xs border border-zinc-200/80 dark:bg-zinc-800 dark:text-zinc-100 dark:border-zinc-700/50 font-semibold"
+                  : "text-zinc-600 hover:text-zinc-900 hover:bg-white/60 dark:text-zinc-400 dark:hover:text-zinc-200 dark:hover:bg-zinc-800/60 border border-transparent"
               }`}
             >
               {sec.label}
@@ -342,7 +342,7 @@ export default function ActivityLogPage() {
                   <button
                     onClick={() => setPage(Math.max(1, page - 1))}
                     disabled={page === 1}
-                    className="px-3 py-1.5 text-zinc-400 hover:text-white bg-zinc-800 hover:bg-zinc-700 disabled:opacity-40 disabled:cursor-not-allowed rounded-lg transition cursor-pointer"
+                    className="px-3 py-1.5 text-xs text-zinc-700 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white bg-white dark:bg-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-700 border border-zinc-200 dark:border-zinc-700 disabled:opacity-40 disabled:cursor-not-allowed rounded-lg transition cursor-pointer"
                   >
                     Previous
                   </button>
@@ -361,7 +361,7 @@ export default function ActivityLogPage() {
                           key={item}
                           onClick={() => setPage(item)}
                           className={`w-7 h-7 rounded-lg transition cursor-pointer text-xs font-semibold ${
-                            page === item ? "bg-zinc-800 text-zinc-100 border border-zinc-700/50 shadow-xs" : "text-zinc-400 hover:text-white bg-zinc-900 hover:bg-zinc-800 border border-zinc-800"
+                            page === item ? "bg-blue-600 text-white font-bold shadow-xs border border-blue-600" : "text-zinc-700 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white bg-white dark:bg-zinc-900 hover:bg-zinc-100 dark:hover:bg-zinc-800 border border-zinc-200 dark:border-zinc-800"
                           }`}
                         >
                           {item}
@@ -371,7 +371,7 @@ export default function ActivityLogPage() {
                   <button
                     onClick={() => setPage(Math.min(pagination.totalPages, page + 1))}
                     disabled={page === pagination.totalPages}
-                    className="px-3 py-1.5 text-zinc-400 hover:text-white bg-zinc-800 hover:bg-zinc-700 disabled:opacity-40 disabled:cursor-not-allowed rounded-lg transition cursor-pointer"
+                    className="px-3 py-1.5 text-xs text-zinc-700 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white bg-white dark:bg-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-700 border border-zinc-200 dark:border-zinc-700 disabled:opacity-40 disabled:cursor-not-allowed rounded-lg transition cursor-pointer"
                   >
                     Next
                   </button>

@@ -135,6 +135,8 @@ function InstagramContent() {
     isDeleting?: boolean;
     actionType?: "post" | "disconnect";
     accountUsername?: string;
+    isLive?: boolean;
+    permalink?: string;
   }>({
     isOpen: false,
     id: "",
@@ -301,16 +303,26 @@ function InstagramContent() {
     });
   };
 
-  // Delete / Cancel Scheduled or Logged Post (Triggers website popup modal)
-  const handleDeletePostLog = async (id: string) => {
+  // Delete / Cancel Scheduled or Logged or Live Post (Triggers website popup modal)
+  const handleDeletePost = async (id: string, isLive: boolean = false, permalink?: string) => {
+    const foundPost = posts.find((p) => p.id === id) || scheduledPosts.find((p) => p.id === id || p.mediaId === id);
+    const targetPermalink = permalink || (foundPost as any)?.permalink;
+
     setDeleteConfirmState({
       isOpen: true,
       id,
-      title: "Delete Post Record",
-      description: "Are you sure you want to delete this post record? This action cannot be undone.",
+      title: isLive ? "Delete Instagram Post" : "Cancel Scheduled Post",
+      description: isLive
+        ? "Are you sure you want to remove this post? Due to Meta's security restrictions, third-party apps cannot delete published posts directly from Instagram servers. You can open it on Instagram to delete it permanently, or remove it from your workspace dashboard."
+        : "Are you sure you want to cancel and delete this scheduled post? It will be permanently removed from your queue and will NOT be posted to Instagram.",
       actionType: "post",
+      isLive,
+      permalink: targetPermalink,
     });
   };
+
+  // Alias for scheduled post deletion
+  const handleDeletePostLog = handleDeletePost;
 
   // Confirm delete or disconnect action from website popup modal
   const handleConfirmAction = async () => {
@@ -333,18 +345,28 @@ function InstagramContent() {
         return;
       }
 
-      // Default: post / history log record deletion
-      const res = await fetch(`/api/admin/instagram/posts?id=${deleteConfirmState.id}`, {
+      // Default: post / history log / live feed post deletion
+      const res = await fetch(`/api/admin/instagram/posts?id=${deleteConfirmState.id}&accountId=${selectedAccountId || currentAccount?.id || ""}`, {
         method: "DELETE",
       });
       const data = await res.json();
       if (res.ok) {
-        setToast({ type: "success", message: "Post record deleted successfully" });
+        if (data.metaRestricted) {
+          setToast({
+            type: "info",
+            message: "Removed from dashboard. (Note: To delete from Instagram, delete directly in the Instagram app)",
+          });
+        } else {
+          setToast({ type: "success", message: data.message || "Post deleted successfully" });
+        }
         setDeleteConfirmState({ isOpen: false, id: "", title: "", description: "" });
-        fetchPosts(selectedAccountId, true);
+        if (viewingPost?.id === deleteConfirmState.id) setViewingPost(null);
         if (viewingScheduledPost?.id === deleteConfirmState.id) setViewingScheduledPost(null);
+        setPosts((prev) => prev.filter((p) => p.id !== deleteConfirmState.id));
+        setScheduledPosts((prev) => prev.filter((p) => p.id !== deleteConfirmState.id && p.mediaId !== deleteConfirmState.id));
+        fetchPosts(selectedAccountId, true);
       } else {
-        setToast({ type: "error", message: data.error || "Failed to delete record" });
+        setToast({ type: "error", message: data.error || "Failed to delete post" });
         setDeleteConfirmState((prev) => ({ ...prev, isDeleting: false }));
       }
     } catch {
@@ -894,9 +916,9 @@ function InstagramContent() {
             {/* Filter / Search for Feed */}
             {activeTab === "feed" && (
               <div className="flex items-center gap-2.5 w-full sm:w-auto">
-                <div className="relative flex-1 sm:w-64">
+                <div className="relative flex-1 sm:w-72 md:w-80">
                   <svg
-                    className="w-4 h-4 text-zinc-400 dark:text-zinc-500 absolute left-3.5 top-1/2 -translate-y-1/2"
+                    className="w-4 h-4 text-zinc-400 dark:text-zinc-500 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
                     fill="none"
                     viewBox="0 0 24 24"
                     stroke="currentColor"
@@ -909,11 +931,23 @@ function InstagramContent() {
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="Search caption..."
-                    className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl pl-10 pr-4 py-2.5 text-sm text-zinc-900 dark:text-zinc-300 placeholder:text-zinc-400 dark:placeholder:text-zinc-600 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:focus:ring-zinc-700 hover:border-zinc-300 dark:hover:border-zinc-700 transition shadow-sm"
+                    className="w-full h-9 bg-white dark:bg-[#111114] border border-zinc-200 dark:border-zinc-800 rounded-xl pl-9 pr-8 text-xs font-medium text-zinc-900 dark:text-zinc-200 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none focus:border-zinc-400 dark:focus:border-zinc-600 hover:border-zinc-300 dark:hover:border-zinc-700 transition shadow-xs"
                   />
+                  {searchQuery && (
+                    <button
+                      type="button"
+                      onClick={() => setSearchQuery("")}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 transition p-0.5 cursor-pointer"
+                      title="Clear search"
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  )}
                 </div>
 
-                <div className="w-44">
+                <div className="w-40 sm:w-44">
                   <DropdownSelect
                     options={filterOptions}
                     value={filterType}
@@ -982,24 +1016,41 @@ function InstagramContent() {
                         </div>
 
                         {/* Overlay Hover Details */}
-                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition duration-200 flex flex-col justify-between p-3 text-white">
-                          <div className="flex items-center justify-end gap-2 text-xs font-bold">
-                            {typeof post.like_count === "number" && post.like_count > 0 && (
-                              <span className="flex items-center gap-1">
-                                <svg className="w-3.5 h-3.5 fill-rose-500 text-rose-500" viewBox="0 0 24 24">
-                                  <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
-                                </svg>
-                                {post.like_count}
-                              </span>
-                            )}
-                            {typeof post.comments_count === "number" && post.comments_count > 0 && (
-                              <span className="flex items-center gap-1">
-                                <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
-                                  <path d="M21.99 4c0-1.1-.89-2-1.99-2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h14l4 4-.01-18z" />
-                                </svg>
-                                {post.comments_count}
-                              </span>
-                            )}
+                        <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition duration-200 flex flex-col justify-between p-3 text-white">
+                          <div className="flex items-center justify-between gap-2 text-xs font-bold">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeletePost(post.id, true, post.permalink);
+                              }}
+                              className="p-1.5 rounded-lg bg-red-600/80 hover:bg-red-600 text-white backdrop-blur-md transition-all duration-150 cursor-pointer shadow-sm hover:scale-105 active:scale-95 flex items-center gap-1 text-[10px]"
+                              title="Delete post"
+                            >
+                              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
+                              </svg>
+                              <span>Delete</span>
+                            </button>
+
+                            <div className="flex items-center gap-2">
+                              {typeof post.like_count === "number" && post.like_count > 0 && (
+                                <span className="flex items-center gap-1">
+                                  <svg className="w-3.5 h-3.5 fill-rose-500 text-rose-500" viewBox="0 0 24 24">
+                                    <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
+                                  </svg>
+                                  {post.like_count}
+                                </span>
+                              )}
+                              {typeof post.comments_count === "number" && post.comments_count > 0 && (
+                                <span className="flex items-center gap-1">
+                                  <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
+                                    <path d="M21.99 4c0-1.1-.89-2-1.99-2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h14l4 4-.01-18z" />
+                                  </svg>
+                                  {post.comments_count}
+                                </span>
+                              )}
+                            </div>
                           </div>
 
                           <p className="text-[11px] line-clamp-3 font-medium text-zinc-100">
@@ -1201,9 +1252,24 @@ function InstagramContent() {
                           <span>{p.comments_count ?? 0}</span>
                         </div>
 
-                        <span className="text-rose-600 hover:underline text-xs font-semibold">
-                          View & Reply →
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-rose-600 hover:underline text-xs font-semibold">
+                            View & Reply →
+                          </span>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeletePost(p.id, true, p.permalink);
+                            }}
+                            className="p-1 text-zinc-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 rounded-lg transition cursor-pointer"
+                            title="Delete post"
+                          >
+                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
+                            </svg>
+                          </button>
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -1629,6 +1695,16 @@ function InstagramContent() {
                     </a>
                   )}
                   <button
+                    onClick={() => handleDeletePost(viewingPost.id, true, viewingPost.permalink)}
+                    className="px-3 py-1.5 bg-red-50 hover:bg-red-100 dark:bg-red-950/40 dark:hover:bg-red-900/60 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-900/50 rounded-xl text-xs font-semibold transition-all duration-150 shadow-xs flex items-center gap-1.5 cursor-pointer active:scale-97"
+                    title="Delete Post"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
+                    </svg>
+                    <span>Delete</span>
+                  </button>
+                  <button
                     onClick={() => setViewingPost(null)}
                     className="p-1.5 text-zinc-400 hover:text-zinc-700 dark:hover:text-white rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-800 transition cursor-pointer"
                   >
@@ -1779,11 +1855,23 @@ function InstagramContent() {
                   <p className="text-xs text-zinc-600 dark:text-zinc-400 mt-1.5 leading-relaxed">
                     {deleteConfirmState.description}
                   </p>
+
+                  {deleteConfirmState.isLive && (
+                    <div className="mt-3 p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-700 dark:text-amber-300 space-y-1">
+                      <div className="font-bold flex items-center gap-1.5">
+                        <span>⚠️</span>
+                        <span>Meta (Instagram) API Limitation</span>
+                      </div>
+                      <p className="text-[11px] leading-relaxed text-zinc-600 dark:text-zinc-400">
+                        Meta prohibits any third-party app from deleting published media directly from Instagram servers. To remove this post from your actual Instagram profile, tap <strong>"Open on Instagram & Delete"</strong> below.
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
 
-            <div className="px-5 py-3.5 bg-zinc-50 dark:bg-[#18181c] border-t border-zinc-200 dark:border-zinc-800/80 flex items-center justify-end gap-2.5">
+            <div className="px-5 py-3.5 bg-zinc-50 dark:bg-[#18181c] border-t border-zinc-200 dark:border-zinc-800/80 flex items-center justify-end gap-2.5 flex-wrap">
               <button
                 type="button"
                 onClick={() => setDeleteConfirmState({ isOpen: false, id: "", title: "", description: "" })}
@@ -1792,6 +1880,22 @@ function InstagramContent() {
               >
                 Cancel
               </button>
+
+              {deleteConfirmState.isLive && deleteConfirmState.permalink && (
+                <a
+                  href={deleteConfirmState.permalink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-4 py-2 rounded-xl text-xs font-semibold text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/60 border border-rose-200 dark:border-rose-900/50 transition flex items-center gap-1.5 cursor-pointer shadow-xs"
+                  title="Open post directly on Instagram to delete or archive"
+                >
+                  <span>Open on Instagram & Delete</span>
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
+                  </svg>
+                </a>
+              )}
+
               <button
                 type="button"
                 onClick={handleConfirmAction}
@@ -1808,7 +1912,13 @@ function InstagramContent() {
                     <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
                     </svg>
-                    <span>{deleteConfirmState.actionType === "disconnect" ? "Disconnect" : "Delete Record"}</span>
+                    <span>
+                      {deleteConfirmState.actionType === "disconnect"
+                        ? "Disconnect"
+                        : deleteConfirmState.isLive
+                        ? "Remove from Workspace"
+                        : "Delete Post"}
+                    </span>
                   </>
                 )}
               </button>

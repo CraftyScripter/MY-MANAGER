@@ -155,9 +155,9 @@ export async function uploadOrUpdateDriveFile(
  */
 export async function listDriveSpreadsheets(accessToken: string): Promise<DriveFileItem[]> {
   const query = encodeURIComponent(
-    "mimeType = 'application/vnd.google-apps.spreadsheet' and trashed = false"
+    "(mimeType = 'application/vnd.google-apps.spreadsheet' or mimeType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet') and trashed = false"
   );
-  const url = `https://www.googleapis.com/drive/v3/files?q=${query}&orderBy=modifiedTime desc&pageSize=30&fields=files(id, name, mimeType, modifiedTime, webViewLink)`;
+  const url = `https://www.googleapis.com/drive/v3/files?q=${query}&orderBy=modifiedTime desc&pageSize=100&fields=files(id, name, mimeType, modifiedTime, webViewLink)&supportsAllDrives=true&includeItemsFromAllDrives=true`;
 
   const res = await fetch(url, {
     headers: { Authorization: `Bearer ${accessToken}` },

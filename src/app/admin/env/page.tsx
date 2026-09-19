@@ -427,36 +427,36 @@ export default function EnvProjectsPage() {
 
       {showCreateModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80">
-          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-lg mx-4 shadow-2xl">
-            <div className="flex items-center justify-between px-6 py-5 border-b border-zinc-800">
-              <h2 className="text-lg font-semibold text-white">New Project</h2>
-              <button onClick={() => setShowCreateModal(false)} className="text-zinc-500 hover:text-white transition text-xl leading-none cursor-pointer w-8 h-8 flex items-center justify-center rounded-lg hover:bg-zinc-800">&times;</button>
+          <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl w-full max-w-lg mx-4 shadow-2xl">
+            <div className="flex items-center justify-between px-6 py-5 border-b border-zinc-200 dark:border-zinc-800">
+              <h2 className="text-lg font-semibold text-zinc-900 dark:text-white">New Project</h2>
+              <button onClick={() => setShowCreateModal(false)} className="text-zinc-400 hover:text-zinc-700 dark:hover:text-white transition text-xl leading-none cursor-pointer w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100 dark:hover:bg-zinc-800">&times;</button>
             </div>
             <div className="px-6 py-5 space-y-4">
               <div>
-                <label className="text-zinc-500 block mb-1 text-sm">Project Name *</label>
+                <label className="text-zinc-700 dark:text-zinc-400 block mb-1 text-sm font-medium">Project Name *</label>
                 <input
                   type="text"
                   value={createName}
                   onChange={(e) => setCreateName(e.target.value)}
                   placeholder="e.g. My Web App"
-                  className="w-full bg-zinc-800/50 border border-zinc-800 rounded-xl px-4 py-3 text-sm text-zinc-300 placeholder:text-zinc-600 focus:outline-none focus:ring-2 focus:ring-zinc-700 transition"
+                  className="w-full bg-slate-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 py-3 text-sm text-zinc-900 dark:text-zinc-300 placeholder:text-zinc-400 dark:placeholder:text-zinc-600 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:focus:ring-zinc-700 transition"
                 />
               </div>
               <div>
-                <label className="text-zinc-500 block mb-1 text-sm">Description</label>
+                <label className="text-zinc-700 dark:text-zinc-400 block mb-1 text-sm font-medium">Description</label>
                 <textarea
                   value={createDescription}
                   onChange={(e) => setCreateDescription(e.target.value)}
                   rows={3}
                   placeholder="Optional description..."
-                  className="w-full bg-zinc-800/50 border border-zinc-800 rounded-xl px-4 py-3 text-sm text-zinc-300 placeholder:text-zinc-600 focus:outline-none focus:ring-2 focus:ring-zinc-700 resize-none transition"
+                  className="w-full bg-slate-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 py-3 text-sm text-zinc-900 dark:text-zinc-300 placeholder:text-zinc-400 dark:placeholder:text-zinc-600 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:focus:ring-zinc-700 resize-none transition"
                 />
               </div>
-              <p className="text-xs text-zinc-600">Default environments (Development, Staging, Production) will be created automatically.</p>
+              <p className="text-xs text-zinc-500 dark:text-zinc-500">Default environments (Development, Staging, Production) will be created automatically.</p>
             </div>
-            <div className="flex justify-end gap-3 px-6 py-5 border-t border-zinc-800">
-              <button onClick={() => setShowCreateModal(false)} className="px-4 py-2.5 text-sm text-zinc-400 hover:text-white bg-zinc-800 hover:bg-zinc-700 rounded-xl transition cursor-pointer">Cancel</button>
+            <div className="flex justify-end gap-3 px-6 py-5 border-t border-zinc-200 dark:border-zinc-800">
+              <button onClick={() => setShowCreateModal(false)} className="px-4 py-2.5 text-sm text-zinc-700 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white bg-slate-100 dark:bg-zinc-800 hover:bg-slate-200 dark:hover:bg-zinc-700 border border-zinc-200 dark:border-transparent rounded-xl transition cursor-pointer">Cancel</button>
               <button onClick={handleCreate} disabled={createLoading} className="btn-primary px-5 py-2.5 text-sm disabled:opacity-40 disabled:cursor-not-allowed">
                 {createLoading ? "Creating..." : "Create Project"}
               </button>
@@ -467,34 +467,34 @@ export default function EnvProjectsPage() {
 
       {editTarget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80">
-          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-lg mx-4 shadow-2xl">
-            <div className="flex items-center justify-between px-6 py-5 border-b border-zinc-800">
-              <h2 className="text-lg font-semibold text-white">Edit Project</h2>
-              <button onClick={() => setEditTarget(null)} className="text-zinc-500 hover:text-white transition text-xl leading-none cursor-pointer w-8 h-8 flex items-center justify-center rounded-lg hover:bg-zinc-800">&times;</button>
+          <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl w-full max-w-lg mx-4 shadow-2xl">
+            <div className="flex items-center justify-between px-6 py-5 border-b border-zinc-200 dark:border-zinc-800">
+              <h2 className="text-lg font-semibold text-zinc-900 dark:text-white">Edit Project</h2>
+              <button onClick={() => setEditTarget(null)} className="text-zinc-400 hover:text-zinc-700 dark:hover:text-white transition text-xl leading-none cursor-pointer w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100 dark:hover:bg-zinc-800">&times;</button>
             </div>
             <div className="px-6 py-5 space-y-4">
               <div>
-                <label className="text-zinc-500 block mb-1 text-sm">Project Name *</label>
+                <label className="text-zinc-700 dark:text-zinc-400 block mb-1 text-sm font-medium">Project Name *</label>
                 <input
                   type="text"
                   value={editName}
                   onChange={(e) => setEditName(e.target.value)}
-                  className="w-full bg-zinc-800/50 border border-zinc-800 rounded-xl px-4 py-3 text-sm text-zinc-300 placeholder:text-zinc-600 focus:outline-none focus:ring-2 focus:ring-zinc-700 transition"
+                  className="w-full bg-slate-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 py-3 text-sm text-zinc-900 dark:text-zinc-300 placeholder:text-zinc-400 dark:placeholder:text-zinc-600 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:focus:ring-zinc-700 transition"
                 />
               </div>
               <div>
-                <label className="text-zinc-500 block mb-1 text-sm">Description</label>
+                <label className="text-zinc-700 dark:text-zinc-400 block mb-1 text-sm font-medium">Description</label>
                 <textarea
                   value={editDescription}
                   onChange={(e) => setEditDescription(e.target.value)}
                   rows={3}
                   placeholder="Optional description..."
-                  className="w-full bg-zinc-800/50 border border-zinc-800 rounded-xl px-4 py-3 text-sm text-zinc-300 placeholder:text-zinc-600 focus:outline-none focus:ring-2 focus:ring-zinc-700 resize-none transition"
+                  className="w-full bg-slate-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 py-3 text-sm text-zinc-900 dark:text-zinc-300 placeholder:text-zinc-400 dark:placeholder:text-zinc-600 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:focus:ring-zinc-700 resize-none transition"
                 />
               </div>
             </div>
-            <div className="flex justify-end gap-3 px-6 py-5 border-t border-zinc-800">
-              <button onClick={() => setEditTarget(null)} className="px-4 py-2.5 text-sm text-zinc-400 hover:text-white bg-zinc-800 hover:bg-zinc-700 rounded-xl transition cursor-pointer">Cancel</button>
+            <div className="flex justify-end gap-3 px-6 py-5 border-t border-zinc-200 dark:border-zinc-800">
+              <button onClick={() => setEditTarget(null)} className="px-4 py-2.5 text-sm text-zinc-700 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white bg-slate-100 dark:bg-zinc-800 hover:bg-slate-200 dark:hover:bg-zinc-700 border border-zinc-200 dark:border-transparent rounded-xl transition cursor-pointer">Cancel</button>
               <button onClick={handleEdit} disabled={editLoading} className="btn-primary px-5 py-2.5 text-sm disabled:opacity-40 disabled:cursor-not-allowed">
                 {editLoading ? "Saving..." : "Save Changes"}
               </button>
@@ -505,33 +505,33 @@ export default function EnvProjectsPage() {
 
       {deleteTarget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80">
-          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-md mx-4 shadow-2xl">
-            <div className="flex items-center justify-between px-6 py-5 border-b border-zinc-800">
-              <h2 className="text-lg font-semibold text-white">Delete Project</h2>
-              <button onClick={() => { setDeleteTarget(null); setDeleteConfirmName(""); }} className="text-zinc-500 hover:text-white transition text-xl leading-none cursor-pointer w-8 h-8 flex items-center justify-center rounded-lg hover:bg-zinc-800">&times;</button>
+          <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl w-full max-w-md mx-4 shadow-2xl">
+            <div className="flex items-center justify-between px-6 py-5 border-b border-zinc-200 dark:border-zinc-800">
+              <h2 className="text-lg font-semibold text-zinc-900 dark:text-white">Delete Project</h2>
+              <button onClick={() => { setDeleteTarget(null); setDeleteConfirmName(""); }} className="text-zinc-400 hover:text-zinc-700 dark:hover:text-white transition text-xl leading-none cursor-pointer w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100 dark:hover:bg-zinc-800">&times;</button>
             </div>
             <div className="px-6 py-5 space-y-4">
-              <p className="text-sm text-zinc-300">
-                Are you sure you want to delete <span className="font-medium text-white">{deleteTarget.name}</span>?
+              <p className="text-sm text-zinc-600 dark:text-zinc-300">
+                Are you sure you want to delete <span className="font-semibold text-zinc-900 dark:text-white">{deleteTarget.name}</span>?
                 This will also delete all environments and variables. This action cannot be undone.
               </p>
               <div>
-                <label className="text-zinc-500 block mb-1 text-sm">Type the project name to confirm:</label>
+                <label className="text-zinc-700 dark:text-zinc-400 block mb-1 text-sm font-medium">Type the project name to confirm:</label>
                 <input
                   type="text"
                   value={deleteConfirmName}
                   onChange={(e) => setDeleteConfirmName(e.target.value)}
                   placeholder={deleteTarget.name}
-                  className="w-full bg-zinc-800/50 border border-zinc-800 rounded-xl px-4 py-3 text-sm text-zinc-300 placeholder:text-zinc-600 focus:outline-none focus:ring-2 focus:ring-zinc-700 transition"
+                  className="w-full bg-slate-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 py-3 text-sm text-zinc-900 dark:text-zinc-300 placeholder:text-zinc-400 dark:placeholder:text-zinc-600 focus:outline-none focus:ring-2 focus:ring-red-500/20 transition"
                 />
               </div>
             </div>
-            <div className="flex justify-end gap-3 px-6 py-5 border-t border-zinc-800">
-              <button onClick={() => { setDeleteTarget(null); setDeleteConfirmName(""); }} className="px-4 py-2.5 text-sm text-zinc-400 hover:text-white bg-zinc-800 hover:bg-zinc-700 rounded-xl transition cursor-pointer">Cancel</button>
+            <div className="flex justify-end gap-3 px-6 py-5 border-t border-zinc-200 dark:border-zinc-800">
+              <button onClick={() => { setDeleteTarget(null); setDeleteConfirmName(""); }} className="px-4 py-2.5 text-sm text-zinc-700 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white bg-slate-100 dark:bg-zinc-800 hover:bg-slate-200 dark:hover:bg-zinc-700 border border-zinc-200 dark:border-transparent rounded-xl transition cursor-pointer">Cancel</button>
               <button
                 onClick={handleDelete}
                 disabled={deleting || deleteConfirmName !== deleteTarget.name}
-                className="px-5 py-2.5 text-sm font-medium text-white bg-red-600 hover:bg-red-500 disabled:opacity-40 disabled:cursor-not-allowed rounded-xl transition cursor-pointer"
+                className="px-5 py-2.5 text-sm font-medium text-white bg-red-600 hover:bg-red-500 disabled:opacity-40 disabled:cursor-not-allowed rounded-xl transition cursor-pointer shadow-xs"
               >
                 {deleting ? "Deleting..." : "Delete Project"}
               </button>

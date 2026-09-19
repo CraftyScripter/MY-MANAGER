@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
-import { getCurrentUser, createTokenForUser, setAuthCookie } from "@/lib/auth";
+import { getCurrentUser, createAdminToken, createTokenForUser, setAuthCookie } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { getWorkspaceAdminGoogleAccount } from "@/lib/google";
 
 export async function GET() {
   try {
@@ -10,29 +11,31 @@ export async function GET() {
       return NextResponse.json({ authenticated: false }, { status: 401 });
     }
 
-    // Refresh the auth cookie with latest permissions from database
-    if (user.role !== "admin") {
-      const freshToken = createTokenForUser(user.id, user.role, user.permissions);
-      await setAuthCookie(freshToken);
-    }
+    // Refresh the auth cookie with fresh token to implement sliding session renewal
+    const freshToken =
+      user.role === "admin"
+        ? createAdminToken()
+        : createTokenForUser(user.id, user.role, user.permissions);
+    await setAuthCookie(freshToken);
 
-    // Fetch linked Google profile picture if available
+    // Fetch linked Google profile picture and display name if available
     let image: string | null = null;
+    let googleName: string | null = null;
     try {
-      const googleAccount = await prisma.googleAccount.findFirst({
-        where: { userId: user.id === "admin" ? "admin" : user.id },
-        select: { picture: true },
-      });
+      const googleAccount = await getWorkspaceAdminGoogleAccount(user.id);
       image = googleAccount?.picture || null;
+      googleName = googleAccount?.name || null;
     } catch {
       // Non-blocking – image stays null
     }
+
+    const displayName = (user.id === "admin" && googleName) ? googleName : user.name;
 
     return NextResponse.json({
       authenticated: true,
       user: {
         id: user.id,
-        name: user.name,
+        name: displayName,
         email: user.email,
         phone: user.phone || null,
         role: user.role,

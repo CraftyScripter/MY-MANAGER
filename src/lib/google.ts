@@ -5,6 +5,7 @@ export const GOOGLE_SCOPES = [
   "https://www.googleapis.com/auth/userinfo.email",
   "https://www.googleapis.com/auth/userinfo.profile",
   "https://www.googleapis.com/auth/drive.file",
+  "https://www.googleapis.com/auth/drive.readonly",
   "https://www.googleapis.com/auth/calendar",
   "https://www.googleapis.com/auth/spreadsheets",
 ];
@@ -26,7 +27,7 @@ export function getGoogleRedirectUri(): string {
   return `${baseUrl.replace(/\/$/, "")}/auth/google/callback`;
 }
 
-export function getGoogleAuthUrl(state: string = "admin"): string {
+export function getGoogleAuthUrl(state: string = "admin", prompt: string = "select_account"): string {
   const clientId = getGoogleClientId();
   const redirectUri = getGoogleRedirectUri();
 
@@ -36,7 +37,7 @@ export function getGoogleAuthUrl(state: string = "admin"): string {
     response_type: "code",
     scope: GOOGLE_SCOPES.join(" "),
     access_type: "offline",
-    prompt: "consent",
+    prompt,
     include_granted_scopes: "true",
     state,
   });

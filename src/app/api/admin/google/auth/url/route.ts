@@ -5,6 +5,7 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const state = searchParams.get("state") || "admin";
+    const prompt = searchParams.get("prompt") || "select_account";
 
     const clientId = getGoogleClientId();
     if (!clientId) {
@@ -16,7 +17,7 @@ export async function GET(request: Request) {
       );
     }
 
-    const authUrl = getGoogleAuthUrl(state);
+    const authUrl = getGoogleAuthUrl(state, prompt);
     return NextResponse.json({ authUrl, success: true });
   } catch (error: any) {
     return NextResponse.json(

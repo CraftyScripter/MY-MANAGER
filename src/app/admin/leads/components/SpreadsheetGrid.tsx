@@ -229,6 +229,8 @@ export default function SpreadsheetGrid({
   const [mergedRanges, setMergedRanges] = useState<MergedRanges>({});
   const [selectedRow, setSelectedRow] = useState<number | null>(null);
   const [visibleRegionTick, setVisibleRegionTick] = useState(0);
+  const [editingMergedKey, setEditingMergedKey] = useState<string | null>(null);
+  const [editingMergedValue, setEditingMergedValue] = useState<string>("");
 
   // Active floating Excel dropdown menu state (Opens on exactly 1 click)
   const [activeDropdown, setActiveDropdown] = useState<{
@@ -823,11 +825,11 @@ export default function SpreadsheetGrid({
       if (rowSpan <= 1 && colSpan <= 1) continue;
 
       const startBounds = grid.getBounds(range.startCol, range.startRow);
-      const endBounds = grid.getBounds(range.endCol, range.startRow);
-      if (!startBounds || !endBounds) continue;
+      const endRowBounds = grid.getBounds(range.endCol, range.endRow) || grid.getBounds(range.endCol, range.startRow);
+      if (!startBounds || !endRowBounds) continue;
 
       const start = toContainerPoint(startBounds.x, startBounds.y);
-      const end = toContainerPoint(endBounds.x + endBounds.width, endBounds.y + endBounds.height);
+      const end = toContainerPoint(endRowBounds.x + endRowBounds.width, endRowBounds.y + endRowBounds.height);
 
       const lead = leads[range.startRow];
       const colKey = allColumnKeys[range.startCol];
@@ -862,7 +864,7 @@ export default function SpreadsheetGrid({
         left: start.x,
         top: start.y,
         width: Math.max(0, end.x - start.x),
-        height: calculatedRowHeight * rowSpan,
+        height: Math.max(calculatedRowHeight * rowSpan, end.y - start.y),
         text,
         bg: style?.bg || rowColor || colColor || (isDark ? "#0d0d10" : "#ffffff"),
         color: style?.textColor || (isDark ? "#f4f4f5" : "#0f172a"),
@@ -2094,45 +2096,80 @@ export default function SpreadsheetGrid({
 
         )}
 
-        {mergedCellOverlays.map((overlay) => (
-          <button
-            key={overlay.key}
-            type="button"
-            onMouseDown={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              selectMergedRange(overlay.range);
-            }}
-            onDoubleClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              selectMergedRange(overlay.range);
-            }}
-            className="absolute z-20 border text-xs overflow-hidden cursor-cell"
-            style={{
-              left: overlay.left,
-              top: overlay.top,
-              width: overlay.width,
-              height: overlay.height,
-              background: overlay.bg,
-              color: overlay.color,
-              borderColor: overlay.selected ? (isDark ? "#60a5fa" : "#2563eb") : (isDark ? "#27272a" : "#e2e8f0"),
-              boxShadow: overlay.selected ? `inset 0 0 0 1px ${isDark ? "#60a5fa" : "#2563eb"}` : "none",
-              fontSize: calculatedFontSize,
-              fontWeight: overlay.bold ? 700 : 400,
-              textAlign: overlay.align,
-              padding: `0 ${Math.round(6 * zoom)}px`,
-              display: "flex",
-              alignItems: "center",
-              justifyContent:
-                overlay.align === "center" ? "center" : overlay.align === "right" ? "flex-end" : "flex-start",
-              whiteSpace: "nowrap",
-            }}
-            title={overlay.text}
-          >
-            <span className="truncate pointer-events-none">{overlay.text}</span>
-          </button>
-        ))}
+        {mergedCellOverlays.map((overlay) => {
+          const isEditing = editingMergedKey === overlay.key;
+
+          return (
+            <div
+              key={overlay.key}
+              onMouseDown={(e) => {
+                if (isEditing) return;
+                e.preventDefault();
+                e.stopPropagation();
+                selectMergedRange(overlay.range);
+              }}
+              onDoubleClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                selectMergedRange(overlay.range);
+                if (canWrite) {
+                  setEditingMergedKey(overlay.key);
+                  setEditingMergedValue(overlay.text);
+                }
+              }}
+              className="absolute z-20 border text-xs overflow-hidden cursor-cell select-none"
+              style={{
+                left: overlay.left,
+                top: overlay.top,
+                width: overlay.width,
+                height: overlay.height,
+                background: overlay.bg,
+                color: overlay.color,
+                borderColor: overlay.selected ? (isDark ? "#60a5fa" : "#2563eb") : (isDark ? "#27272a" : "#e2e8f0"),
+                boxShadow: overlay.selected ? `inset 0 0 0 1px ${isDark ? "#60a5fa" : "#2563eb"}` : "none",
+                fontSize: calculatedFontSize,
+                fontWeight: overlay.bold ? 700 : 400,
+                textAlign: overlay.align,
+                padding: `0 ${Math.round(6 * zoom)}px`,
+                display: "flex",
+                alignItems: "center",
+                justifyContent:
+                  overlay.align === "center" ? "center" : overlay.align === "right" ? "flex-end" : "flex-start",
+                whiteSpace: "nowrap",
+              }}
+              title={overlay.text}
+            >
+              {isEditing ? (
+                <input
+                  autoFocus
+                  type="text"
+                  value={editingMergedValue}
+                  onChange={(e) => setEditingMergedValue(e.target.value)}
+                  onBlur={() => {
+                    if (canWrite) {
+                      const anchorLead = leads[overlay.range.startRow];
+                      const colKey = allColumnKeys[overlay.range.startCol];
+                      if (anchorLead && colKey && editingMergedValue !== overlay.text) {
+                        onCellEdit(anchorLead.id, colKey, editingMergedValue);
+                      }
+                    }
+                    setEditingMergedKey(null);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.currentTarget.blur();
+                    } else if (e.key === "Escape") {
+                      setEditingMergedKey(null);
+                    }
+                  }}
+                  className="w-full h-full bg-transparent text-inherit font-inherit text-xs focus:outline-none"
+                />
+              ) : (
+                <span className="truncate pointer-events-none">{overlay.text}</span>
+              )}
+            </div>
+          );
+        })}
 
         {/* Live Selection Quick Stats Pill (Google Sheets style at bottom right) */}
         {selectionStats && (

@@ -14,6 +14,9 @@ export async function GET(request: Request) {
     const user = await getCurrentUser();
     const userId = user?.id || "admin";
 
+    const { searchParams } = new URL(request.url);
+    const fileId = searchParams.get("fileId");
+
     let links = await prisma.googleSheetLink.findMany({
       where: {
         userId,
@@ -59,9 +62,14 @@ export async function GET(request: Request) {
       });
     }
 
+    // Only return an activeLink if it specifically belongs to the requested fileId
+    const activeLink = fileId
+      ? links.find((l) => l.fileId === fileId) || null
+      : links[0] || null;
+
     return NextResponse.json({
       links,
-      activeLink: links[0] || null,
+      activeLink,
       success: true,
     });
   } catch (error: any) {
@@ -221,6 +229,13 @@ export async function DELETE(request: Request) {
     });
 
     if (link?.fileId) {
+      const linkedFile = await prisma.leadFile.findUnique({ where: { id: link.fileId } });
+      if (linkedFile && linkedFile.description?.includes("Google Sheet")) {
+        await prisma.leadFile.update({
+          where: { id: link.fileId },
+          data: { description: null },
+        });
+      }
       broadcastGlobal("file_updated", { fileId: link.fileId });
     }
 

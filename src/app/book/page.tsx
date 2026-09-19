@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import Link from "next/link";
 import ThemeToggle from "@/components/ThemeToggle";
 
 interface TimeSlot {
@@ -39,7 +40,10 @@ export default function PublicBookingPage() {
       setLoadingSlots(true);
       setSelectedSlot(null);
       const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
-      const res = await fetch(`/api/calendar/availability?date=${dateStr}&duration=${dur}&timeZone=${encodeURIComponent(timeZone)}`);
+      const res = await fetch(
+        `/api/calendar/availability?date=${dateStr}&duration=${dur}&timeZone=${encodeURIComponent(timeZone)}&_t=${Date.now()}`,
+        { cache: "no-store" }
+      );
       if (res.ok) {
         const data = await res.json();
         setSlots(data.slots || []);
@@ -91,6 +95,13 @@ export default function PublicBookingPage() {
         startTime: selectedSlot.start,
         meetLink: data.meetLink,
       });
+
+      // Broadcast to any open My Manager tabs/admin windows immediately
+      try {
+        const bc = new BroadcastChannel("mm_calendar_sync");
+        bc.postMessage({ type: "booking_created", appointment: data.appointment });
+        bc.close();
+      } catch (_) {}
     } catch {
       setErrorMessage("Something went wrong while booking. Please try again.");
     } finally {
@@ -102,13 +113,13 @@ export default function PublicBookingPage() {
     <div className="min-h-screen bg-slate-50 dark:bg-[#09090b] text-zinc-900 dark:text-zinc-100 flex flex-col justify-between transition-colors duration-200">
       {/* Top Navbar */}
       <header className="border-b border-zinc-200 dark:border-zinc-800 bg-white/70 dark:bg-[#09090b]/70 backdrop-blur-md sticky top-0 z-30 px-6 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-2.5">
-          <img src="/myicon.png" alt="Logo" className="w-8 h-8 rounded-xl object-contain shadow-xs" />
+        <Link href="/" className="flex items-center gap-2.5 hover:opacity-90 transition cursor-pointer group">
+          <img src="/myicon.png" alt="Logo" className="w-8 h-8 rounded-xl object-contain shadow-xs group-hover:scale-105 transition-transform" />
           <div>
             <h1 className="text-sm font-bold text-zinc-900 dark:text-white leading-tight">My Manager</h1>
             <p className="text-[10px] text-zinc-500">Live Workspace Scheduling</p>
           </div>
-        </div>
+        </Link>
 
         <div className="flex items-center gap-3">
           <ThemeToggle variant="button" />
@@ -176,9 +187,11 @@ export default function PublicBookingPage() {
                 setSelectedSlot(null);
                 setClientName("");
                 setClientEmail("");
+                setClientPhone("");
                 setNotes("");
+                fetchSlots(selectedDate, duration);
               }}
-              className="w-full py-2.5 rounded-xl text-xs font-semibold bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 transition cursor-pointer"
+              className="w-full py-2.5 rounded-xl text-xs font-semibold bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 transition cursor-pointer active:scale-97 shadow-xs"
             >
               Book Another Meeting
             </button>
@@ -190,9 +203,13 @@ export default function PublicBookingPage() {
             <div className="p-6 md:p-8 md:col-span-4 border-b md:border-b-0 md:border-r border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/30 flex flex-col justify-between">
               <div className="space-y-5">
                 <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-2xl bg-blue-600 border border-blue-500 flex items-center justify-center text-white font-bold text-lg shadow-md">
-                    MM
-                  </div>
+                  <Link
+                    href="/"
+                    className="w-12 h-12 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 flex items-center justify-center shadow-md p-2 hover:scale-105 transition shrink-0 group"
+                    title="Back to My Manager Home"
+                  >
+                    <img src="/myicon.png" alt="My Manager Logo" className="w-full h-full object-contain group-hover:scale-105 transition-transform" />
+                  </Link>
                   <div>
                     <h2 className="text-base font-bold text-zinc-900 dark:text-white">Strategy Session</h2>
                     <p className="text-xs text-zinc-500">{duration} Min One-on-One</p>

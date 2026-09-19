@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import DropdownSelect from "@/components/DropdownSelect";
 
@@ -104,12 +104,19 @@ export default function AdminPage() {
     { label: "This Year", value: "1y" },
   ];
 
+  const lastDataSignatureRef = useRef<string>("");
+
   const fetchDashboardData = async (isBackground = false) => {
     if (!isBackground) setRefreshing(true);
     try {
-      const res = await fetch("/api/admin/stats");
+      const res = await fetch(`/api/admin/stats?_t=${Date.now()}`, { cache: "no-store" });
       if (!res.ok) throw new Error("Failed to load statistics");
       const data: DashboardStats = await res.json();
+      const signature = `${data.total}_${data.replied}_${data.pending}_${data.leads?.total}_${data.paymentSummary?.netBalance}_${data.teamSummary?.total}`;
+      if (isBackground && signature === lastDataSignatureRef.current) {
+        return;
+      }
+      lastDataSignatureRef.current = signature;
       setStats(data);
     } catch {
       if (!isBackground) {
@@ -122,7 +129,38 @@ export default function AdminPage() {
   };
 
   useEffect(() => {
-    fetchDashboardData();
+    fetchDashboardData(false);
+
+    // 1. Silent background poll every 15 seconds
+    const interval = setInterval(() => {
+      if (document.hidden) return;
+      fetchDashboardData(true);
+    }, 15000);
+
+    // 2. Instant sync when tab gains focus or becomes visible
+    const handleFocus = () => fetchDashboardData(true);
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") fetchDashboardData(true);
+    };
+
+    window.addEventListener("focus", handleFocus);
+    document.addEventListener("visibilitychange", handleVisibility);
+
+    // 3. Cross-tab sync listener
+    let bc: BroadcastChannel | null = null;
+    try {
+      bc = new BroadcastChannel("mm_calendar_sync");
+      bc.onmessage = () => {
+        fetchDashboardData(true);
+      };
+    } catch (_) {}
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("focus", handleFocus);
+      document.removeEventListener("visibilitychange", handleVisibility);
+      if (bc) bc.close();
+    };
   }, []);
 
   useEffect(() => {

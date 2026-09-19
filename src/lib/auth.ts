@@ -5,7 +5,7 @@ import { prisma } from "./prisma";
 import { ALL_PERMISSIONS, hasPermission } from "./permissions";
 
 const COOKIE_NAME = "admin_token";
-const TOKEN_EXPIRY = 24 * 60 * 60 * 1000; // 24 hours
+const TOKEN_EXPIRY = 30 * 24 * 60 * 60 * 1000; // 30 days
 const HMAC_ALGO = "sha256";
 
 function getTokenSecret(): string {
@@ -94,6 +94,7 @@ export async function setAuthCookie(token: string): Promise<void> {
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
     maxAge: TOKEN_EXPIRY / 1000,
+    expires: new Date(Date.now() + TOKEN_EXPIRY),
     path: "/",
   });
 }

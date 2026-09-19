@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 
 interface CalendarEvent {
   id: string;
@@ -11,6 +11,12 @@ interface CalendarEvent {
   meetLink?: string;
   attendees?: { email: string; displayName?: string }[];
   status: string;
+  notes?: string;
+  clientPhone?: string;
+  clientName?: string;
+  clientEmail?: string;
+  bookedByRole?: string;
+  htmlLink?: string;
 }
 
 export default function AdminCalendarPage() {
@@ -18,9 +24,14 @@ export default function AdminCalendarPage() {
   const [loading, setLoading] = useState(true);
   const [showScheduleModal, setShowScheduleModal] = useState(false);
   const [cancelModalEvent, setCancelModalEvent] = useState<CalendarEvent | null>(null);
+  const [selectedDetailEvent, setSelectedDetailEvent] = useState<CalendarEvent | null>(null);
+  const [copiedMeet, setCopiedMeet] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
   const [filterMode, setFilterMode] = useState<"upcoming" | "all">("upcoming");
+
+  // Real-time synchronization signature to prevent unnecessary re-renders
+  const lastDataSignatureRef = useRef<string>("");
 
   // Schedule modal state (Calendly style)
   const [title, setTitle] = useState("");
@@ -36,24 +47,64 @@ export default function AdminCalendarPage() {
   const [submitting, setSubmitting] = useState(false);
   const [modalError, setModalError] = useState("");
 
-  const fetchEvents = useCallback(async () => {
+  const fetchEvents = useCallback(async (isBackground = false) => {
     try {
-      setLoading(true);
-      const res = await fetch("/api/admin/calendar/events");
+      if (!isBackground) setLoading(true);
+      const res = await fetch(`/api/admin/calendar/events?_t=${Date.now()}`, {
+        cache: "no-store",
+      });
       if (res.ok) {
         const data = await res.json();
-        setEvents(data.events || []);
+        const incoming = data.events || [];
+        const signature = incoming.map((e: CalendarEvent) => `${e.id}_${e.status}_${e.start}_${e.notes || ""}`).join("|");
+        if (isBackground && signature === lastDataSignatureRef.current) {
+          return;
+        }
+        lastDataSignatureRef.current = signature;
+        setEvents(incoming);
       }
     } catch (err) {
-      console.error("Failed to load events:", err);
+      if (!isBackground) console.error("Failed to load events:", err);
     } finally {
-      setLoading(false);
+      if (!isBackground) setLoading(false);
     }
   }, []);
 
+  // Real-time live synchronization (polling + focus revalidation + cross-tab broadcast)
   useEffect(() => {
-    fetchEvents();
-  }, [fetchEvents]);
+    fetchEvents(false);
+
+    // 1. Silent background poll every 10 seconds
+    const interval = setInterval(() => {
+      if (document.hidden || showScheduleModal || cancelModalEvent || selectedDetailEvent) return;
+      fetchEvents(true);
+    }, 10000);
+
+    // 2. Instant sync when tab gains focus or becomes visible
+    const handleFocus = () => fetchEvents(true);
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") fetchEvents(true);
+    };
+
+    window.addEventListener("focus", handleFocus);
+    document.addEventListener("visibilitychange", handleVisibility);
+
+    // 3. Cross-tab instant sync via BroadcastChannel
+    let bc: BroadcastChannel | null = null;
+    try {
+      bc = new BroadcastChannel("mm_calendar_sync");
+      bc.onmessage = () => {
+        fetchEvents(true);
+      };
+    } catch (_) {}
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("focus", handleFocus);
+      document.removeEventListener("visibilitychange", handleVisibility);
+      if (bc) bc.close();
+    };
+  }, [fetchEvents, showScheduleModal, cancelModalEvent, selectedDetailEvent]);
 
   // Fetch free schedule slots dynamically when date or duration changes
   const fetchFreeSlots = useCallback(async (date: string, dur: number) => {
@@ -61,7 +112,10 @@ export default function AdminCalendarPage() {
       setLoadingSlots(true);
       setSelectedSlot(null);
       const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
-      const res = await fetch(`/api/calendar/availability?date=${date}&duration=${dur}&timeZone=${encodeURIComponent(timeZone)}`);
+      const res = await fetch(
+        `/api/calendar/availability?date=${date}&duration=${dur}&timeZone=${encodeURIComponent(timeZone)}&_t=${Date.now()}`,
+        { cache: "no-store" }
+      );
       if (res.ok) {
         const data = await res.json();
         const allSlots = data.slots || [];
@@ -134,7 +188,14 @@ export default function AdminCalendarPage() {
       setClientPhone("");
       setNotes("");
       setSelectedSlot(null);
-      fetchEvents();
+      fetchEvents(true);
+
+      // Broadcast to other tabs/windows
+      try {
+        const bc = new BroadcastChannel("mm_calendar_sync");
+        bc.postMessage({ type: "booking_created", appointment: data.appointment });
+        bc.close();
+      } catch (_) {}
     } catch {
       setModalError("Network error occurred. Please try again.");
     } finally {
@@ -152,7 +213,14 @@ export default function AdminCalendarPage() {
       });
       if (res.ok) {
         setCancelModalEvent(null);
-        fetchEvents();
+        fetchEvents(true);
+
+        // Broadcast to other tabs/windows
+        try {
+          const bc = new BroadcastChannel("mm_calendar_sync");
+          bc.postMessage({ type: "booking_cancelled", eventId: cancelModalEvent.id });
+          bc.close();
+        } catch (_) {}
       }
     } catch (err) {
       console.error("Failed to cancel event:", err);
@@ -177,7 +245,7 @@ export default function AdminCalendarPage() {
             </h1>
             <span className="px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 flex items-center gap-1.5 shadow-xs">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              Admin-Centric Google Sync Active
+              Real-Time Auto-Sync Active (10s)
             </span>
           </div>
           <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1.5 max-w-2xl leading-relaxed">
@@ -188,7 +256,7 @@ export default function AdminCalendarPage() {
         <div className="flex items-center gap-3 flex-wrap">
           <button
             onClick={copyBookingLink}
-            className="px-4 py-2.5 rounded-xl text-xs font-semibold bg-white dark:bg-[#111114] border border-zinc-200 dark:border-zinc-800 text-zinc-800 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800/80 active:scale-97 transition flex items-center gap-2 cursor-pointer shadow-xs"
+            className="px-4 py-2.5 rounded-xl text-xs font-semibold bg-white dark:bg-[#111114] border border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 text-zinc-800 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-800/80 active:scale-97 transition flex items-center gap-2 cursor-pointer shadow-xs"
           >
             {copiedLink ? (
               <>
@@ -209,7 +277,7 @@ export default function AdminCalendarPage() {
 
           <button
             onClick={() => setShowScheduleModal(true)}
-            className="btn-primary px-5 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2 cursor-pointer shadow-md active:scale-97"
+            className="btn-primary px-4 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2 cursor-pointer shadow-sm active:scale-97"
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
@@ -262,23 +330,23 @@ export default function AdminCalendarPage() {
       {/* 3. Events Table Container - Full Width */}
       <div className="w-full rounded-2xl bg-white dark:bg-[#111114] border border-zinc-200 dark:border-zinc-800 overflow-hidden shadow-xs">
         <div className="px-6 py-4.5 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between flex-wrap gap-3">
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-1.5 p-1 bg-zinc-100 dark:bg-zinc-900/80 rounded-xl border border-zinc-200/80 dark:border-zinc-800">
             <button
               onClick={() => setFilterMode("upcoming")}
-              className={`px-4 py-2 rounded-xl text-xs font-semibold transition cursor-pointer ${
+              className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                 filterMode === "upcoming"
-                  ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 shadow-xs"
-                  : "text-zinc-500 hover:text-zinc-900 dark:hover:text-white"
+                  ? "bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white shadow-xs font-bold"
+                  : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
               }`}
             >
               Upcoming ({upcomingEvents.length})
             </button>
             <button
               onClick={() => setFilterMode("all")}
-              className={`px-4 py-2 rounded-xl text-xs font-semibold transition cursor-pointer ${
+              className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                 filterMode === "all"
-                  ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 shadow-xs"
-                  : "text-zinc-500 hover:text-zinc-900 dark:hover:text-white"
+                  ? "bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white shadow-xs font-bold"
+                  : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
               }`}
             >
               All Events ({events.length})
@@ -286,7 +354,7 @@ export default function AdminCalendarPage() {
           </div>
 
           <button
-            onClick={fetchEvents}
+            onClick={() => fetchEvents(false)}
             disabled={loading}
             className="px-3 py-1.5 text-xs text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800/80 rounded-xl transition cursor-pointer flex items-center gap-1.5"
             title="Refresh events"
@@ -357,7 +425,11 @@ export default function AdminCalendarPage() {
                       className="hover:bg-zinc-50/60 dark:hover:bg-zinc-900/40 transition"
                     >
                       <td className="px-6 py-4.5">
-                        <div className="font-bold text-sm text-zinc-900 dark:text-white flex items-center gap-2.5">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedDetailEvent(event)}
+                          className="font-bold text-sm text-zinc-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 transition text-left flex items-center gap-2.5 cursor-pointer"
+                        >
                           <span>{event.summary}</span>
                           {isPast ? (
                             <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400">
@@ -368,10 +440,27 @@ export default function AdminCalendarPage() {
                               Confirmed
                             </span>
                           )}
-                        </div>
-                        {event.description && (
-                          <p className="text-xs text-zinc-500 line-clamp-1 mt-1 max-w-lg">{event.description}</p>
-                        )}
+                        </button>
+                        {event.notes ? (
+                          <div
+                            onClick={() => setSelectedDetailEvent(event)}
+                            className="flex items-center gap-2 mt-1.5 cursor-pointer group max-w-lg"
+                          >
+                            <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 shrink-0 group-hover:bg-blue-500/20 transition">
+                              Notes
+                            </span>
+                            <p className="text-xs text-zinc-600 dark:text-zinc-400 truncate group-hover:text-zinc-900 dark:group-hover:text-zinc-200 transition">
+                              {event.notes}
+                            </p>
+                          </div>
+                        ) : event.description ? (
+                          <p
+                            onClick={() => setSelectedDetailEvent(event)}
+                            className="text-xs text-zinc-500 line-clamp-1 mt-1 max-w-lg cursor-pointer hover:text-zinc-700 dark:hover:text-zinc-300 transition"
+                          >
+                            {event.description}
+                          </p>
+                        ) : null}
                       </td>
 
                       <td className="px-6 py-4.5 whitespace-nowrap">
@@ -423,12 +512,27 @@ export default function AdminCalendarPage() {
                       </td>
 
                       <td className="px-6 py-4.5 text-right">
-                        <button
-                          onClick={() => setCancelModalEvent(event)}
-                          className="px-3 py-1.5 rounded-xl text-xs font-semibold text-red-500 hover:bg-red-500/10 border border-transparent hover:border-red-500/20 active:scale-97 transition cursor-pointer"
-                        >
-                          Cancel
-                        </button>
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setSelectedDetailEvent(event)}
+                            className="px-3 py-1.5 rounded-xl text-xs font-semibold text-zinc-700 dark:text-zinc-300 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 border border-zinc-200 dark:border-zinc-700/80 active:scale-97 transition cursor-pointer flex items-center gap-1.5 shadow-2xs"
+                            title="View full notes & client details"
+                          >
+                            <svg className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            </svg>
+                            <span>View Notes</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setCancelModalEvent(event)}
+                            className="px-3 py-1.5 rounded-xl text-xs font-semibold text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/60 border border-rose-200/80 dark:border-rose-900/50 active:scale-97 transition cursor-pointer"
+                          >
+                            Cancel
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -538,7 +642,7 @@ export default function AdminCalendarPage() {
               </div>
               <button
                 onClick={() => setShowScheduleModal(false)}
-                className="p-2 text-zinc-400 hover:text-white rounded-xl hover:bg-zinc-800 transition cursor-pointer"
+                className="p-2 text-zinc-400 hover:text-zinc-900 dark:hover:text-white rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-800 transition cursor-pointer"
               >
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -740,6 +844,212 @@ export default function AdminCalendarPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* 5. Meeting Details & Client Briefing Modal */}
+      {selectedDetailEvent && (
+        <div className="fixed inset-0 bg-black/75 backdrop-blur-md z-50 flex items-center justify-center p-4 overflow-y-auto animate-in fade-in duration-150">
+          <div className="bg-white dark:bg-[#121216] border border-zinc-200 dark:border-zinc-800/80 rounded-3xl p-6 sm:p-8 max-w-xl w-full shadow-2xl space-y-6 my-8 animate-in zoom-in-95 duration-150">
+            {/* Header */}
+            <div className="flex items-start justify-between gap-4 pb-4 border-b border-zinc-200 dark:border-zinc-800">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2.5 flex-wrap">
+                  <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+                    Meeting Details
+                  </span>
+                  {new Date(selectedDetailEvent.end).getTime() < now ? (
+                    <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400">
+                      Completed
+                    </span>
+                  ) : (
+                    <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+                      Confirmed
+                    </span>
+                  )}
+                  {selectedDetailEvent.bookedByRole && (
+                    <span className="px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-zinc-100 dark:bg-zinc-800/80 text-zinc-600 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-700/80">
+                      {selectedDetailEvent.bookedByRole === "client" ? "Booked via Public Link" : `Booked by ${selectedDetailEvent.bookedByRole}`}
+                    </span>
+                  )}
+                </div>
+                <h3 className="text-xl font-bold text-zinc-900 dark:text-white pt-1">
+                  {selectedDetailEvent.summary}
+                </h3>
+              </div>
+              <button
+                onClick={() => setSelectedDetailEvent(null)}
+                className="p-2 text-zinc-400 hover:text-zinc-900 dark:hover:text-white rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-800 transition cursor-pointer"
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Date & Time Highlight */}
+            <div className="p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-900/60 border border-zinc-200 dark:border-zinc-800/80 flex items-center justify-between flex-wrap gap-3">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-500 flex items-center justify-center shrink-0">
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 9v7.5" />
+                  </svg>
+                </div>
+                <div>
+                  <p className="text-xs text-zinc-500 font-medium">Scheduled Date & Time</p>
+                  <p className="text-sm font-bold text-zinc-900 dark:text-white">
+                    {new Date(selectedDetailEvent.start).toLocaleDateString("en-US", {
+                      weekday: "long",
+                      month: "short",
+                      day: "numeric",
+                      year: "numeric",
+                    })}
+                  </p>
+                  <p className="text-xs text-zinc-500">
+                    {new Date(selectedDetailEvent.start).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })} -{" "}
+                    {new Date(selectedDetailEvent.end).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}
+                  </p>
+                </div>
+              </div>
+
+              {selectedDetailEvent.meetLink && (
+                <div className="flex items-center gap-2">
+                  <a
+                    href={selectedDetailEvent.meetLink}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="btn-primary px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm"
+                  >
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 10.5l4.72-4.72a.75.75 0 011.28.53v11.38a.75.75 0 01-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 002.25-2.25v-9a2.25 2.25 0 00-2.25-2.25h-9A2.25 2.25 0 002.25 7.5v9a2.25 2.25 0 002.25 2.25z" />
+                    </svg>
+                    <span>Join Meet</span>
+                  </a>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (selectedDetailEvent.meetLink) {
+                        navigator.clipboard.writeText(selectedDetailEvent.meetLink);
+                        setCopiedMeet(true);
+                        setTimeout(() => setCopiedMeet(false), 2000);
+                      }
+                    }}
+                    className="p-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition cursor-pointer"
+                    title="Copy Meet link"
+                  >
+                    {copiedMeet ? (
+                      <svg className="w-4 h-4 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                      </svg>
+                    ) : (
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M15.666 3.888A2.25 2.25 0 0013.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 01-.75.75H9a.75.75 0 01-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 01-2.25 2.25H6.75A2.25 2.25 0 014.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 011.927-.184" />
+                      </svg>
+                    )}
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Client / Attendee Details */}
+            <div className="space-y-3">
+              <h4 className="text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
+                Client / Attendee Information
+              </h4>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="p-3.5 rounded-xl bg-zinc-50 dark:bg-zinc-900/40 border border-zinc-200 dark:border-zinc-800 space-y-1">
+                  <span className="text-[11px] text-zinc-400 font-medium">Name</span>
+                  <p className="text-sm font-semibold text-zinc-900 dark:text-white">
+                    {selectedDetailEvent.clientName ||
+                      selectedDetailEvent.attendees?.[0]?.displayName ||
+                      selectedDetailEvent.attendees?.[0]?.email?.split("@")[0] ||
+                      "Not specified"}
+                  </p>
+                </div>
+
+                <div className="p-3.5 rounded-xl bg-zinc-50 dark:bg-zinc-900/40 border border-zinc-200 dark:border-zinc-800 space-y-1">
+                  <span className="text-[11px] text-zinc-400 font-medium">Email</span>
+                  <p className="text-sm font-semibold text-zinc-900 dark:text-white truncate">
+                    {selectedDetailEvent.clientEmail ||
+                      selectedDetailEvent.attendees?.[0]?.email ||
+                      "Not specified"}
+                  </p>
+                </div>
+
+                {selectedDetailEvent.clientPhone && (
+                  <div className="p-3.5 rounded-xl bg-zinc-50 dark:bg-zinc-900/40 border border-zinc-200 dark:border-zinc-800 space-y-1 sm:col-span-2">
+                    <span className="text-[11px] text-zinc-400 font-medium">Phone / WhatsApp</span>
+                    <p className="text-sm font-semibold text-zinc-900 dark:text-white">
+                      {selectedDetailEvent.clientPhone}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Notes & Agenda (Prominent Callout) */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <h4 className="text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider flex items-center gap-1.5">
+                  <svg className="w-4 h-4 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+                  </svg>
+                  <span>Client Notes / Discussion Agenda</span>
+                </h4>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-blue-50/50 dark:bg-blue-950/20 border border-blue-200/80 dark:border-blue-900/50">
+                {selectedDetailEvent.notes ? (
+                  <p className="text-sm text-zinc-800 dark:text-zinc-200 whitespace-pre-wrap leading-relaxed">
+                    {selectedDetailEvent.notes}
+                  </p>
+                ) : selectedDetailEvent.description ? (
+                  <p className="text-sm text-zinc-800 dark:text-zinc-200 whitespace-pre-wrap leading-relaxed">
+                    {selectedDetailEvent.description}
+                  </p>
+                ) : (
+                  <p className="text-xs text-zinc-500 italic">
+                    No additional notes or discussion points provided by the client for this meeting.
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* Footer Buttons */}
+            <div className="flex items-center justify-between pt-4 border-t border-zinc-200 dark:border-zinc-800 flex-wrap gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  const ev = selectedDetailEvent;
+                  setSelectedDetailEvent(null);
+                  setCancelModalEvent(ev);
+                }}
+                className="px-4 py-2 rounded-xl text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 border border-rose-200/80 dark:border-rose-900/50 transition cursor-pointer"
+              >
+                Cancel Meeting
+              </button>
+
+              <div className="flex items-center gap-2">
+                {selectedDetailEvent.htmlLink && (
+                  <a
+                    href={selectedDetailEvent.htmlLink}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="px-3.5 py-2 rounded-xl text-xs font-semibold text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 transition"
+                  >
+                    Google Calendar &rarr;
+                  </a>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setSelectedDetailEvent(null)}
+                  className="px-5 py-2 rounded-xl text-xs font-semibold bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 transition cursor-pointer"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

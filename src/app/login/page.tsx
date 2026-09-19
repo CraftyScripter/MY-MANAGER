@@ -44,129 +44,73 @@ function LoginForm() {
     });
   }, [from, router]);
 
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setError("");
+  const handleGoogleLogin = async () => {
     setLoading(true);
-
+    setError("");
     try {
-      const res = await fetch("/api/admin/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, password }),
-      });
-
+      const res = await fetch("/api/admin/google/auth/url?state=login");
       const data = await res.json();
-
-      if (!res.ok) {
-        setError("Invalid username or password");
-        setLoading(false);
-        return;
-      }
-
-      if (from) {
-        window.location.href = from;
-      } else if (data.role && data.permissions) {
-        if (data.role === "admin") {
-          window.location.href = "/admin";
-        } else {
-          window.location.href = getFirstPermittedPath(data.permissions);
-        }
+      if (data.authUrl) {
+        window.location.href = data.authUrl;
       } else {
-        window.location.href = "/admin";
+        setError(data.error || "Google Sign In is currently unavailable");
+        setLoading(false);
       }
     } catch {
-      setError("Something went wrong");
+      setError("Failed to connect to Google OAuth service");
       setLoading(false);
     }
-  }
+  };
 
   return (
-    <div className="w-full max-w-sm bg-white dark:bg-[#111114] border border-zinc-200 dark:border-zinc-800 p-8 rounded-3xl shadow-2xl transition-colors duration-200">
-      <div className="text-center mb-6">
-        <Link href="/" className="inline-block">
+    <div className="w-full max-w-md bg-white dark:bg-[#111114] border border-zinc-200 dark:border-zinc-800 p-8 md:p-10 rounded-3xl shadow-2xl transition-colors duration-200 space-y-6">
+      <div className="text-center space-y-2">
+        <Link href="/" className="inline-block hover:scale-105 transition-transform">
           <img
             src="/myicon.png"
             alt="My Manager Logo"
-            className="w-12 h-12 rounded-2xl mx-auto mb-3 shadow-md object-contain"
+            className="w-14 h-14 rounded-2xl mx-auto mb-2 shadow-md object-contain"
           />
         </Link>
-        <h1 className="text-2xl font-bold text-zinc-900 dark:text-white tracking-tight">Welcome Back</h1>
-        <p className="text-zinc-500 text-xs mt-1">Sign in to your My Manager workspace</p>
+        <h1 className="text-2xl font-extrabold text-zinc-900 dark:text-white tracking-tight">
+          Welcome to My Manager
+        </h1>
+        <p className="text-zinc-500 text-xs">
+          Sign in with your Google account to access your workspace
+        </p>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-4">
-        {error && (
-          <div className="bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 text-xs px-3.5 py-2.5 rounded-xl font-medium">
-            {error}
-          </div>
-        )}
-
-        <div>
-          <label className="block text-xs font-semibold text-zinc-600 dark:text-zinc-400 mb-1.5">Email</label>
-          <input
-            type="email"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            required
-            autoFocus
-            className="w-full bg-zinc-50 dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800 rounded-xl px-3.5 py-2.5 text-sm text-zinc-900 dark:text-white placeholder:text-zinc-400 dark:placeholder:text-zinc-600 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
-            placeholder="admin@mymanager.com"
-          />
+      {error && (
+        <div className="bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 text-xs px-3.5 py-2.5 rounded-xl font-medium">
+          {error}
         </div>
+      )}
 
-        <div>
-          <label className="block text-xs font-semibold text-zinc-600 dark:text-zinc-400 mb-1.5">Password</label>
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            className="w-full bg-zinc-50 dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800 rounded-xl px-3.5 py-2.5 text-sm text-zinc-900 dark:text-white placeholder:text-zinc-400 dark:placeholder:text-zinc-600 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
-            placeholder="••••••••"
-          />
+      {/* Info card */}
+      <div className="p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-900/60 border border-zinc-200 dark:border-zinc-800 space-y-2">
+        <div className="flex items-center gap-2 text-xs font-semibold text-zinc-800 dark:text-zinc-200">
+          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+          <span>Google Workspace Integrated</span>
         </div>
+        <p className="text-[11px] text-zinc-500 dark:text-zinc-400 leading-relaxed">
+          Your files, meetings, and CRM sheets are directly synced to your Google Drive and Google Calendar.
+        </p>
+      </div>
 
-        <button
-          type="submit"
-          disabled={loading}
-          className="btn-primary w-full py-2.5 text-sm disabled:opacity-40 disabled:cursor-not-allowed shadow-md mt-2 cursor-pointer"
-        >
-          {loading ? "Signing in..." : "Sign In to Workspace"}
-        </button>
-
-        <div className="relative my-4">
-          <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-zinc-200 dark:border-zinc-800" />
-          </div>
-          <div className="relative flex justify-center text-[10px] uppercase">
-            <span className="bg-white dark:bg-[#111114] px-2 text-zinc-400 font-medium">Or continue with</span>
-          </div>
-        </div>
-
-        <button
-          type="button"
-          onClick={async () => {
-            try {
-              const res = await fetch("/api/admin/google/auth/url?state=login");
-              const data = await res.json();
-              if (data.authUrl) {
-                window.location.href = data.authUrl;
-              } else {
-                setError(data.error || "Google Login unavailable");
-              }
-            } catch {
-              setError("Failed to initialize Google Login");
-            }
-          }}
-          className="w-full py-2.5 px-4 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800/80 dark:hover:bg-zinc-800 border border-zinc-200 dark:border-zinc-700/80 rounded-xl text-xs font-semibold text-zinc-800 dark:text-zinc-200 flex items-center justify-center gap-2.5 transition cursor-pointer"
-        >
-          <svg className="w-4 h-4" viewBox="0 0 24 24">
+      {/* Single Google Sign In Action */}
+      <button
+        type="button"
+        onClick={handleGoogleLogin}
+        disabled={loading}
+        className="w-full py-3.5 px-5 bg-white dark:bg-[#18181b] hover:bg-zinc-100 dark:hover:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-2xl text-xs font-bold text-zinc-900 dark:text-white flex items-center justify-center gap-3 transition shadow-lg cursor-pointer active:scale-97 disabled:opacity-50"
+      >
+        {loading ? (
+          <div className="w-5 h-5 border-2 border-zinc-400 border-t-zinc-700 dark:border-t-white rounded-full animate-spin" />
+        ) : (
+          <svg className="w-5 h-5" viewBox="0 0 24 24">
             <path
               fill="#4285F4"
               d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
@@ -184,14 +128,14 @@ function LoginForm() {
               d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
             />
           </svg>
-          <span>Sign In with Google</span>
-        </button>
-      </form>
+        )}
+        <span>{loading ? "Connecting to Google..." : "Sign In with Google"}</span>
+      </button>
 
-      <div className="mt-6 text-center text-xs text-zinc-500">
-        Don't have an admin workspace?{" "}
+      <div className="pt-2 text-center text-xs text-zinc-500 border-t border-zinc-200 dark:border-zinc-800">
+        New to My Manager?{" "}
         <Link href="/signup" className="text-blue-500 font-semibold hover:underline">
-          Get Started &rarr;
+          Sign Up with Google &rarr;
         </Link>
       </div>
     </div>

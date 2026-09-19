@@ -118,6 +118,7 @@ export async function DELETE(
     }
     await prisma.leadTab.deleteMany({ where: { fileId: id } });
     await prisma.leadColumn.deleteMany({ where: { fileId: id } });
+    await prisma.googleSheetLink.deleteMany({ where: { fileId: id } });
     await prisma.leadFile.delete({ where: { id } });
 
     await logActivity({

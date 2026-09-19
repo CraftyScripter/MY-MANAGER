@@ -178,6 +178,48 @@ export async function appendSpreadsheetRow(
 }
 
 /**
+ * Creates a new Google Spreadsheet in the user's Google account.
+ */
+export async function createGoogleSpreadsheet(
+  accessToken: string,
+  title: string,
+  sheetTitle: string = "Sheet 1"
+): Promise<{ spreadsheetId: string; spreadsheetUrl: string }> {
+  const res = await fetch("https://sheets.googleapis.com/v4/spreadsheets", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      properties: {
+        title,
+      },
+      sheets: [
+        {
+          properties: {
+            title: sheetTitle,
+          },
+        },
+      ],
+    }),
+  });
+
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`Failed to create Google Spreadsheet (${res.status}): ${err}`);
+  }
+
+  const data = await res.json();
+  return {
+    spreadsheetId: data.spreadsheetId,
+    spreadsheetUrl:
+      data.spreadsheetUrl ||
+      `https://docs.google.com/spreadsheets/d/${data.spreadsheetId}/edit`,
+  };
+}
+
+/**
  * Detect column indexes for Lead fields from header row.
  */
 export function detectColumnMapping(headers: string[]): SheetHeaderMapping {
@@ -548,18 +590,27 @@ export async function pushLeadToGoogleSheet(
     const account = await getValidGoogleAccount(userId);
     if (!account) return;
 
-    // Find if there is a linked sheet for this tab or active sheet
+    const tab = await prisma.leadTab.findUnique({
+      where: { id: tabId },
+      select: { fileId: true, name: true },
+    });
+
+    // Find if there is a linked sheet for this tab, its parent file, or active sheet
     const link = await prisma.googleSheetLink.findFirst({
       where: {
         userId,
-        OR: [{ tabId }, { tabId: null }],
+        OR: [
+          { tabId },
+          ...(tab?.fileId ? [{ fileId: tab.fileId }] : []),
+          { tabId: null },
+        ],
       },
       orderBy: { updatedAt: "desc" },
     });
 
     if (!link) return;
 
-    const sheetName = link.sheetName || "Sheet1";
+    const sheetName = link.sheetName || tab?.name || "Sheet1";
     await ensureSheetHeaders(account.accessToken, link.spreadsheetId, sheetName);
 
     const row = [

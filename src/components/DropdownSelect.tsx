@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
+import { createPortal } from "react-dom";
 
 export interface DropdownOption {
   label: string;
@@ -15,8 +16,11 @@ interface DropdownSelectProps {
   placeholder?: string;
   disabled?: boolean;
   className?: string;
+  buttonClassName?: string;
   align?: "left" | "right";
   minWidth?: string;
+  direction?: "up" | "down" | "auto";
+  size?: "sm" | "md";
 }
 
 export default function DropdownSelect({
@@ -26,53 +30,118 @@ export default function DropdownSelect({
   placeholder = "Select...",
   disabled = false,
   className = "",
+  buttonClassName = "",
   align = "right",
   minWidth = "210px",
+  direction = "auto",
+  size = "md",
 }: DropdownSelectProps) {
   const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
+  const [menuStyle, setMenuStyle] = useState<React.CSSProperties>({});
+  const triggerRef = useRef<HTMLDivElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
+  const calculatePosition = useCallback(() => {
+    if (!triggerRef.current) return;
+    const rect = triggerRef.current.getBoundingClientRect();
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const spaceAbove = rect.top;
+
+    let isUp = false;
+    if (direction === "up") {
+      isUp = true;
+    } else if (direction === "down") {
+      isUp = false;
+    } else {
+      isUp = spaceBelow < 220 && spaceAbove > 220;
     }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+
+    const style: React.CSSProperties = {
+      position: "fixed",
+      zIndex: 99999,
+      minWidth: minWidth || `${Math.max(rect.width, 80)}px`,
+    };
+
+    if (isUp) {
+      style.bottom = `${window.innerHeight - rect.top + 6}px`;
+      style.maxHeight = `${Math.min(260, Math.max(120, rect.top - 16))}px`;
+    } else {
+      style.top = `${rect.bottom + 6}px`;
+      style.maxHeight = `${Math.min(260, Math.max(120, window.innerHeight - rect.bottom - 16))}px`;
+    }
+
+    if (align === "left") {
+      style.left = `${Math.max(8, rect.left)}px`;
+    } else {
+      style.right = `${Math.max(8, window.innerWidth - rect.right)}px`;
+    }
+
+    setMenuStyle(style);
+  }, [align, direction, minWidth]);
+
+  const handleToggle = () => {
+    if (disabled) return;
+    if (!open) {
+      calculatePosition();
+      setOpen(true);
+    } else {
+      setOpen(false);
+    }
+  };
 
   useEffect(() => {
-    function handleEscape(e: KeyboardEvent) {
+    if (!open) return;
+
+    const handleUpdate = () => calculatePosition();
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as Node;
+      if (triggerRef.current && triggerRef.current.contains(target)) return;
+      if (menuRef.current && menuRef.current.contains(target)) return;
+      setOpen(false);
+    };
+    const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") setOpen(false);
-    }
-    if (open) {
-      document.addEventListener("keydown", handleEscape);
-      return () => document.removeEventListener("keydown", handleEscape);
-    }
-  }, [open]);
+    };
+
+    window.addEventListener("scroll", handleUpdate, true);
+    window.addEventListener("resize", handleUpdate);
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      window.removeEventListener("scroll", handleUpdate, true);
+      window.removeEventListener("resize", handleUpdate);
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [open, calculatePosition]);
 
   const selected = options.find((o) => o.value === value);
   const displayText = selected ? selected.label : placeholder;
 
+  const sizeButtonClasses =
+    size === "sm"
+      ? "h-7.5 px-2.5 text-xs rounded-lg"
+      : "h-9 px-3.5 text-xs rounded-xl";
+
   return (
-    <div ref={ref} className={`relative ${className}`}>
+    <div ref={triggerRef} className={`relative inline-block ${className}`}>
       <button
         type="button"
         disabled={disabled}
-        onClick={() => !disabled && setOpen(!open)}
-        className={`w-full flex items-center justify-between gap-2.5 bg-white dark:bg-[#111114] border border-zinc-200 dark:border-zinc-800 rounded-xl px-3.5 py-2 text-xs font-semibold text-left transition-all duration-150 cursor-pointer shadow-xs active:scale-97 ${
+        onClick={handleToggle}
+        className={`w-full flex items-center justify-between gap-2 bg-white dark:bg-[#111114] border border-zinc-200 dark:border-zinc-800 text-left font-semibold transition-all duration-150 cursor-pointer shadow-xs active:scale-97 ${sizeButtonClasses} ${
           disabled
             ? "opacity-50 cursor-not-allowed"
-            : "hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700"
-        } ${open ? "ring-2 ring-zinc-400/20 dark:ring-zinc-700 border-zinc-300 dark:border-zinc-700" : ""} ${
-          !selected ? "text-zinc-400 dark:text-zinc-500" : "text-zinc-700 dark:text-zinc-200"
-        }`}
+            : "hover:bg-zinc-50 dark:hover:bg-zinc-800/60 hover:border-zinc-300 dark:hover:border-zinc-700"
+        } ${open ? "ring-2 ring-blue-500/20 border-blue-500/50 dark:border-blue-500/40" : ""} ${
+          !selected ? "text-zinc-400 dark:text-zinc-500" : "text-zinc-900 dark:text-zinc-100"
+        } ${buttonClassName}`}
       >
         <span className="truncate">{displayText}</span>
         <svg
           className={`w-3.5 h-3.5 text-zinc-400 dark:text-zinc-400 shrink-0 transition-transform duration-200 ${
-            open ? "rotate-180" : ""
+            open ? "rotate-180 text-blue-500" : ""
           }`}
           fill="none"
           viewBox="0 0 24 24"
@@ -83,14 +152,13 @@ export default function DropdownSelect({
         </svg>
       </button>
 
-      {open && (
+      {open && typeof document !== "undefined" && createPortal(
         <div
-          style={{ minWidth }}
-          className={`absolute z-50 mt-1.5 w-full ${
-            align === "right" ? "right-0" : "left-0"
-          } bg-white dark:bg-[#111114] border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-xl p-1.5 space-y-0.5 animate-in fade-in zoom-in-95 duration-100 overflow-hidden font-sans`}
+          ref={menuRef}
+          style={menuStyle}
+          className="bg-white dark:bg-[#121215] border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-2xl p-1.5 space-y-0.5 animate-in fade-in zoom-in-95 duration-100 overflow-hidden font-sans"
         >
-          <div className="max-h-60 overflow-y-auto overscroll-contain py-0.5 space-y-0.5">
+          <div className="overflow-y-auto overscroll-contain py-0.5 space-y-0.5 max-h-56">
             {options.map((option) => {
               const isSelected = option.value === value;
               return (
@@ -101,16 +169,16 @@ export default function DropdownSelect({
                     onChange(option.value);
                     setOpen(false);
                   }}
-                  className={`w-full text-left px-3 py-2 text-xs font-semibold rounded-lg transition-colors duration-150 flex items-center justify-between gap-2 cursor-pointer ${
+                  className={`w-full text-left px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors duration-150 flex items-center justify-between gap-2 cursor-pointer ${
                     isSelected
-                      ? "bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-white"
-                      : "text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-white"
+                      ? "bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-900/40 font-bold"
+                      : "text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800/80 hover:text-zinc-900 dark:hover:text-white"
                   }`}
                 >
                   <span className="truncate">{option.label}</span>
                   {isSelected && (
                     <svg
-                      className="w-3.5 h-3.5 text-zinc-900 dark:text-white shrink-0 ml-1.5"
+                      className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0 ml-1.5"
                       fill="none"
                       viewBox="0 0 24 24"
                       stroke="currentColor"
@@ -123,7 +191,8 @@ export default function DropdownSelect({
               );
             })}
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

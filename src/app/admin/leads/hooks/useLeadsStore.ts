@@ -265,9 +265,21 @@ export function useLeadsStore() {
     const handleRefresh = () => {
       loadTree();
     };
+    const handleFocus = () => {
+      loadTree();
+    };
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") loadTree();
+    };
+
     window.addEventListener("leads-tree-refresh", handleRefresh);
+    window.addEventListener("focus", handleFocus);
+    document.addEventListener("visibilitychange", handleVisibility);
+
     return () => {
       window.removeEventListener("leads-tree-refresh", handleRefresh);
+      window.removeEventListener("focus", handleFocus);
+      document.removeEventListener("visibilitychange", handleVisibility);
     };
   }, [loadTree]);
 
@@ -307,10 +319,8 @@ export function useLeadsStore() {
     fetch(`/api/admin/leads/google-sheets?fileId=${expandedFile.id}`)
       .then((r) => r.json())
       .then((data) => {
-        if (data.activeLink?.sheetUrl) {
+        if (data.activeLink && data.activeLink.fileId === expandedFile.id && data.activeLink.sheetUrl) {
           setGoogleSheetUrl(data.activeLink.sheetUrl);
-        } else if (data.links && data.links.length > 0 && data.links[0]?.sheetUrl) {
-          setGoogleSheetUrl(data.links[0].sheetUrl);
         } else {
           setGoogleSheetUrl(null);
         }

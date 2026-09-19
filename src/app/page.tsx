@@ -1,16 +1,28 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import ThemeToggle from "@/components/ThemeToggle";
 
 export default function SaaSMarketingLandingPage() {
-  const [activeTab, setActiveTab] = useState<"leads" | "calendar" | "drive" | "vault">("leads");
+  const [activeTab, setActiveTab] = useState<"dashboard" | "leads" | "calendar" | "forms" | "finance" | "drive" | "vault">("leads");
   const [billingPeriod, setBillingPeriod] = useState<"monthly" | "yearly">("yearly");
   const [selectedSlot, setSelectedSlot] = useState<string>("today-2pm");
   const [revealedVaultKey, setRevealedVaultKey] = useState<boolean>(false);
   const [copiedKey, setCopiedKey] = useState<boolean>(false);
   const [leadStatusFilter, setLeadStatusFilter] = useState<string>("all");
+  const [currentUser, setCurrentUser] = useState<any>(null);
+
+  useEffect(() => {
+    fetch("/api/admin/auth/me")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (data && data.authenticated && data.user) {
+          setCurrentUser(data.user);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   const handleCopyKey = () => {
     setCopiedKey(true);
@@ -42,18 +54,18 @@ export default function SaaSMarketingLandingPage() {
           </Link>
 
           <nav className="hidden md:flex items-center gap-1 bg-zinc-100/80 dark:bg-zinc-900/60 p-1 rounded-full border border-zinc-200/60 dark:border-zinc-800/60 text-xs font-semibold text-zinc-600 dark:text-zinc-400">
-            <a href="#features" className="px-3.5 py-1.5 rounded-full hover:text-zinc-900 dark:hover:text-white hover:bg-white dark:hover:bg-zinc-800/80 transition-all">
+            <Link href="/features" className="px-3.5 py-1.5 rounded-full hover:text-zinc-900 dark:hover:text-white hover:bg-white dark:hover:bg-zinc-800/80 transition-all">
               Features
-            </a>
+            </Link>
             <a href="#architecture" className="px-3.5 py-1.5 rounded-full hover:text-zinc-900 dark:hover:text-white hover:bg-white dark:hover:bg-zinc-800/80 transition-all">
               Why Admin-Centric
             </a>
             <a href="#preview" className="px-3.5 py-1.5 rounded-full hover:text-zinc-900 dark:hover:text-white hover:bg-white dark:hover:bg-zinc-800/80 transition-all">
               Live Preview
             </a>
-            <a href="#pricing" className="px-3.5 py-1.5 rounded-full hover:text-zinc-900 dark:hover:text-white hover:bg-white dark:hover:bg-zinc-800/80 transition-all">
+            <Link href="/pricing" className="px-3.5 py-1.5 rounded-full hover:text-zinc-900 dark:hover:text-white hover:bg-white dark:hover:bg-zinc-800/80 transition-all">
               Pricing
-            </a>
+            </Link>
             <Link href="/book" className="px-3.5 py-1.5 rounded-full text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40 transition-all flex items-center gap-1.5 font-bold">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
               <span>Book Demo</span>
@@ -62,18 +74,30 @@ export default function SaaSMarketingLandingPage() {
 
           <div className="flex items-center gap-2.5">
             <ThemeToggle variant="button" />
-            <Link
-              href="/login"
-              className="hidden sm:inline-flex px-3.5 py-1.5 rounded-xl text-xs font-semibold text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 transition"
-            >
-              Sign In
-            </Link>
-            <Link
-              href="/signup"
-              className="btn-primary px-4 py-2 rounded-xl text-xs font-semibold shadow-md active:scale-97 cursor-pointer"
-            >
-              Get Started Free
-            </Link>
+            {currentUser ? (
+              <Link
+                href="/admin"
+                className="btn-primary px-4 py-2 rounded-xl text-xs font-bold shadow-md active:scale-97 cursor-pointer flex items-center gap-2"
+              >
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                <span>Go to Workspace &rarr;</span>
+              </Link>
+            ) : (
+              <>
+                <Link
+                  href="/login"
+                  className="hidden sm:inline-flex px-3.5 py-1.5 rounded-xl text-xs font-semibold text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 transition"
+                >
+                  Sign In
+                </Link>
+                <Link
+                  href="/signup"
+                  className="btn-primary px-4 py-2 rounded-xl text-xs font-bold shadow-md active:scale-97 cursor-pointer"
+                >
+                  Sign Up with Google
+                </Link>
+              </>
+            )}
           </div>
         </div>
       </header>
@@ -110,34 +134,44 @@ export default function SaaSMarketingLandingPage() {
 
           {/* CTA Buttons */}
           <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4 max-w-md mx-auto sm:max-w-none">
-            <Link
-              href="/signup"
-              className="w-full sm:w-auto px-7 py-3.5 rounded-2xl bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 hover:bg-zinc-800 dark:hover:bg-zinc-100 font-bold text-sm shadow-xl transition-all active:scale-97 cursor-pointer flex items-center justify-center gap-2.5 hover:shadow-blue-500/10"
-            >
-              <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
-                <path
-                  fill="currentColor"
-                  d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                />
-                <path
-                  fill="currentColor"
-                  d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                />
-                <path
-                  fill="currentColor"
-                  d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
-                />
-                <path
-                  fill="currentColor"
-                  d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
-                />
-              </svg>
-              <span>Get Started with Google</span>
-            </Link>
+            {currentUser ? (
+              <Link
+                href="/admin"
+                className="btn-primary w-full sm:w-auto px-8 py-4 rounded-2xl text-sm font-bold shadow-xl shadow-blue-500/20 active:scale-97 cursor-pointer flex items-center justify-center gap-2.5"
+              >
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                <span>Open Workspace Dashboard &rarr;</span>
+              </Link>
+            ) : (
+              <Link
+                href="/signup"
+                className="btn-primary w-full sm:w-auto px-8 py-4 rounded-2xl text-sm font-bold shadow-xl shadow-blue-500/20 active:scale-97 cursor-pointer flex items-center justify-center gap-2.5"
+              >
+                <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
+                  <path
+                    fill="currentColor"
+                    d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                  />
+                  <path
+                    fill="currentColor"
+                    d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                  />
+                  <path
+                    fill="currentColor"
+                    d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
+                  />
+                  <path
+                    fill="currentColor"
+                    d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
+                  />
+                </svg>
+                <span>Sign Up with Google</span>
+              </Link>
+            )}
 
             <Link
               href="/book"
-              className="w-full sm:w-auto px-6 py-3.5 rounded-2xl bg-white dark:bg-[#111114] border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800/80 text-zinc-900 dark:text-zinc-100 font-semibold text-sm shadow-xs transition-all active:scale-97 cursor-pointer flex items-center justify-center gap-2"
+              className="w-full sm:w-auto px-7 py-4 rounded-2xl bg-white dark:bg-[#111114] border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800/80 text-zinc-900 dark:text-zinc-100 font-semibold text-sm shadow-xs transition-all active:scale-97 cursor-pointer flex items-center justify-center gap-2"
             >
               <svg className="w-4 h-4 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 9v7.5" />
@@ -163,356 +197,659 @@ export default function SaaSMarketingLandingPage() {
           </div>
 
           {/* 3. Interactive Live Workspace Preview Card */}
-          <div id="preview" className="mt-14 max-w-5xl mx-auto rounded-3xl bg-white dark:bg-[#111114] border border-zinc-200/90 dark:border-zinc-800 shadow-2xl overflow-hidden text-left transition-all duration-300">
+          <div id="preview" className="mt-14 max-w-6xl mx-auto rounded-3xl bg-white dark:bg-[#111114] border border-zinc-200/90 dark:border-zinc-800 shadow-2xl overflow-hidden text-left transition-all duration-300">
             {/* Window title bar */}
-            <div className="px-5 py-3.5 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/70 flex flex-wrap items-center justify-between gap-3">
+            <div className="px-5 py-3 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-100/70 dark:bg-zinc-900/80 flex flex-wrap items-center justify-between gap-3">
               <div className="flex items-center gap-2">
                 <div className="w-3 h-3 rounded-full bg-rose-500/80" />
                 <div className="w-3 h-3 rounded-full bg-amber-500/80" />
                 <div className="w-3 h-3 rounded-full bg-emerald-500/80" />
-                <span className="text-xs font-semibold text-zinc-600 dark:text-zinc-300 ml-3 flex items-center gap-1.5">
+                <span className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 ml-2 flex items-center gap-1.5">
                   <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                  My Manager Workspace — Live Interactive Demo
+                  My Manager Workspace — Inside Panel Preview
                 </span>
               </div>
 
-              {/* Module switcher tabs */}
-              <div className="flex items-center gap-1 bg-zinc-200/60 dark:bg-zinc-800/80 p-1 rounded-xl text-xs font-semibold">
-                <button
-                  onClick={() => setActiveTab("leads")}
-                  className={`px-3 py-1 rounded-lg transition cursor-pointer flex items-center gap-1.5 ${
-                    activeTab === "leads"
-                      ? "bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white shadow-xs font-bold"
-                      : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
-                  }`}
-                >
-                  <span>📊</span>
-                  <span>Leads & CRM</span>
-                </button>
-                <button
-                  onClick={() => setActiveTab("calendar")}
-                  className={`px-3 py-1 rounded-lg transition cursor-pointer flex items-center gap-1.5 ${
-                    activeTab === "calendar"
-                      ? "bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white shadow-xs font-bold"
-                      : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
-                  }`}
-                >
-                  <span>📅</span>
-                  <span>Calendar & Meet</span>
-                </button>
-                <button
-                  onClick={() => setActiveTab("drive")}
-                  className={`px-3 py-1 rounded-lg transition cursor-pointer flex items-center gap-1.5 ${
-                    activeTab === "drive"
-                      ? "bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white shadow-xs font-bold"
-                      : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
-                  }`}
-                >
-                  <span>☁️</span>
-                  <span>Drive BYO</span>
-                </button>
-                <button
-                  onClick={() => setActiveTab("vault")}
-                  className={`px-3 py-1 rounded-lg transition cursor-pointer flex items-center gap-1.5 ${
-                    activeTab === "vault"
-                      ? "bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white shadow-xs font-bold"
-                      : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
-                  }`}
-                >
-                  <span>🔐</span>
-                  <span>Secret Vault</span>
-                </button>
+              {/* Status pills mimicking actual panel */}
+              <div className="hidden sm:flex items-center gap-2 text-[11px] font-medium text-zinc-500 dark:text-zinc-400">
+                <span className="flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                  Drive Connected
+                </span>
+                <span>•</span>
+                <span className="flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+                  Sheets 2-Way Sync
+                </span>
+                <span>•</span>
+                <span className="flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-purple-500" />
+                  Meet Active
+                </span>
               </div>
             </div>
 
-            {/* Tab Preview Content */}
-            <div className="p-6 md:p-8 bg-zinc-50/60 dark:bg-[#0c0c0f] min-h-[340px] flex flex-col justify-center">
-              {activeTab === "leads" && (
+            {/* Mobile Module Switcher (Visible only on small screens) */}
+            <div className="md:hidden p-2 bg-zinc-50 dark:bg-zinc-900/60 border-b border-zinc-200 dark:border-zinc-800 flex items-center gap-1 overflow-x-auto scrollbar-thin">
+              {[
+                { id: "dashboard", label: "Dashboard", icon: "📊" },
+                { id: "leads", label: "Leads & CRM", icon: "📋" },
+                { id: "calendar", label: "Calendar", icon: "📅" },
+                { id: "forms", label: "Forms", icon: "✉️" },
+                { id: "finance", label: "Finance", icon: "💳" },
+                { id: "drive", label: "Drive BYO", icon: "☁️" },
+                { id: "vault", label: "Vault", icon: "🔐" },
+              ].map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id as any)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap flex items-center gap-1.5 transition ${
+                    activeTab === tab.id
+                      ? "bg-blue-600 text-white shadow-xs"
+                      : "bg-white dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300"
+                  }`}
+                >
+                  <span>{tab.icon}</span>
+                  <span>{tab.label}</span>
+                </button>
+              ))}
+            </div>
+
+            {/* Main Panel Simulation with Sidebar */}
+            <div className="flex min-h-[460px]">
+              {/* Left Miniature Admin Sidebar (matching AdminLayout) */}
+              <div className="w-56 shrink-0 border-r border-zinc-200 dark:border-zinc-800 bg-zinc-50/70 dark:bg-[#0c0c0f] p-3.5 hidden md:flex flex-col justify-between">
                 <div className="space-y-4">
-                  <div className="flex flex-wrap items-center justify-between gap-3">
+                  {/* Brand Header */}
+                  <div className="flex items-center gap-2.5 px-2 py-1">
+                    <img src="/myicon.png" alt="My Manager" className="w-7 h-7 rounded-lg object-contain shrink-0" />
                     <div>
-                      <div className="flex items-center gap-2">
-                        <h4 className="text-sm font-bold text-zinc-900 dark:text-white">Active Pipeline & Spreadsheet Grid</h4>
-                        <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
-                          Merged Cells Enabled
-                        </span>
-                      </div>
-                      <p className="text-xs text-zinc-500 mt-0.5">Bi-directionally synced with Google Sheet #1BxiMVs0XRA5n...</p>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <div className="flex items-center gap-1 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg p-0.5 text-[11px]">
-                        <button
-                          onClick={() => setLeadStatusFilter("all")}
-                          className={`px-2 py-0.5 rounded ${leadStatusFilter === "all" ? "bg-blue-600 text-white font-semibold" : "text-zinc-500"}`}
-                        >
-                          All
-                        </button>
-                        <button
-                          onClick={() => setLeadStatusFilter("converted")}
-                          className={`px-2 py-0.5 rounded ${leadStatusFilter === "converted" ? "bg-emerald-600 text-white font-semibold" : "text-zinc-500"}`}
-                        >
-                          Converted
-                        </button>
-                        <button
-                          onClick={() => setLeadStatusFilter("contacted")}
-                          className={`px-2 py-0.5 rounded ${leadStatusFilter === "contacted" ? "bg-blue-600 text-white font-semibold" : "text-zinc-500"}`}
-                        >
-                          Contacted
-                        </button>
-                      </div>
-
-                      <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 flex items-center gap-1.5 shrink-0">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" />
-                        Live 2-Way Sync
-                      </span>
+                      <p className="text-xs font-bold text-zinc-900 dark:text-white leading-tight">My Manager</p>
+                      <p className="text-[10px] text-zinc-400 leading-tight">Dashboard & Workspace</p>
                     </div>
                   </div>
 
-                  <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#111114] overflow-hidden text-xs shadow-xs">
-                    <table className="w-full text-left">
-                      <thead className="bg-zinc-50 dark:bg-zinc-900/70 border-b border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400">
-                        <tr>
-                          <th className="px-4 py-2.5 font-bold">Client / Company</th>
-                          <th className="px-4 py-2.5 font-bold">Category</th>
-                          <th className="px-4 py-2.5 font-bold">Deal Status</th>
-                          <th className="px-4 py-2.5 font-bold">Phone / Contact</th>
-                          <th className="px-4 py-2.5 font-bold">Priority</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800/60">
-                        {(leadStatusFilter === "all" || leadStatusFilter === "converted") && (
-                          <tr className="hover:bg-slate-50 dark:hover:bg-zinc-900/40 transition">
-                            <td className="px-4 py-3 font-semibold text-zinc-900 dark:text-white flex items-center gap-2">
-                              <span className="w-6 h-6 rounded-lg bg-blue-500/10 text-blue-600 flex items-center justify-center font-bold text-[10px]">A</span>
-                              <span>Apex Digital Labs</span>
-                            </td>
-                            <td className="px-4 py-3 text-zinc-500">SaaS / Enterprise</td>
-                            <td className="px-4 py-3">
-                              <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 font-bold text-[11px]">
-                                Converted
-                              </span>
-                            </td>
-                            <td className="px-4 py-3 text-zinc-500 font-mono">+1 (555) 392-1829</td>
-                            <td className="px-4 py-3 text-amber-500 font-bold">★ High (₹1.2L)</td>
-                          </tr>
-                        )}
-                        {(leadStatusFilter === "all" || leadStatusFilter === "contacted") && (
-                          <tr className="hover:bg-slate-50 dark:hover:bg-zinc-900/40 transition">
-                            <td className="px-4 py-3 font-semibold text-zinc-900 dark:text-white flex items-center gap-2">
-                              <span className="w-6 h-6 rounded-lg bg-purple-500/10 text-purple-600 flex items-center justify-center font-bold text-[10px]">H</span>
-                              <span>Horizon Tech Studio</span>
-                            </td>
-                            <td className="px-4 py-3 text-zinc-500">Design Agency</td>
-                            <td className="px-4 py-3">
-                              <span className="px-2.5 py-0.5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 font-bold text-[11px]">
-                                Contacted
-                              </span>
-                            </td>
-                            <td className="px-4 py-3 text-zinc-500 font-mono">+1 (555) 781-9920</td>
-                            <td className="px-4 py-3 text-blue-500 font-bold">★ Medium (₹65k)</td>
-                          </tr>
-                        )}
-                        {leadStatusFilter === "all" && (
-                          <tr className="hover:bg-slate-50 dark:hover:bg-zinc-900/40 transition">
-                            <td className="px-4 py-3 font-semibold text-zinc-900 dark:text-white flex items-center gap-2">
-                              <span className="w-6 h-6 rounded-lg bg-amber-500/10 text-amber-600 flex items-center justify-center font-bold text-[10px]">L</span>
-                              <span>Lumina Growth Agency</span>
-                            </td>
-                            <td className="px-4 py-3 text-zinc-500">Performance Marketing</td>
-                            <td className="px-4 py-3">
-                              <span className="px-2.5 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 font-bold text-[11px]">
-                                Proposal Sent
-                              </span>
-                            </td>
-                            <td className="px-4 py-3 text-zinc-500 font-mono">+1 (555) 431-0021</td>
-                            <td className="px-4 py-3 text-purple-500 font-bold">★ High (₹2.4L)</td>
-                          </tr>
-                        )}
-                      </tbody>
-                    </table>
+                  {/* Nav Group 1: MAIN / WORKSPACE */}
+                  <div className="space-y-1">
+                    <p className="px-2 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">
+                      MAIN / WORKSPACE
+                    </p>
+                    <div className="space-y-0.5">
+                      <button
+                        onClick={() => setActiveTab("dashboard")}
+                        className={`w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-xl text-xs font-medium transition cursor-pointer text-left ${
+                          activeTab === "dashboard"
+                            ? "bg-blue-50 text-blue-700 border border-blue-200/80 dark:bg-zinc-800 dark:text-white dark:border-zinc-700 font-bold shadow-xs"
+                            : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800/40"
+                        }`}
+                      >
+                        <svg className="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z" />
+                        </svg>
+                        <span>Dashboard</span>
+                      </button>
+
+                      <button
+                        onClick={() => setActiveTab("leads")}
+                        className={`w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-xl text-xs font-medium transition cursor-pointer text-left ${
+                          activeTab === "leads"
+                            ? "bg-blue-50 text-blue-700 border border-blue-200/80 dark:bg-zinc-800 dark:text-white dark:border-zinc-700 font-bold shadow-xs"
+                            : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800/40"
+                        }`}
+                      >
+                        <svg className="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 12h16.5m-16.5 3.75h16.5M3.75 19.5h16.5M5.625 4.5h12.75a1.875 1.875 0 010 3.75H5.625a1.875 1.875 0 010-3.75z" />
+                        </svg>
+                        <span>Leads</span>
+                      </button>
+
+                      <button
+                        onClick={() => setActiveTab("forms")}
+                        className={`w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-xl text-xs font-medium transition cursor-pointer text-left ${
+                          activeTab === "forms"
+                            ? "bg-blue-50 text-blue-700 border border-blue-200/80 dark:bg-zinc-800 dark:text-white dark:border-zinc-700 font-bold shadow-xs"
+                            : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800/40"
+                        }`}
+                      >
+                        <svg className="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+                        </svg>
+                        <span>Form Submissions</span>
+                      </button>
+
+                      <button
+                        onClick={() => setActiveTab("finance")}
+                        className={`w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-xl text-xs font-medium transition cursor-pointer text-left ${
+                          activeTab === "finance"
+                            ? "bg-blue-50 text-blue-700 border border-blue-200/80 dark:bg-zinc-800 dark:text-white dark:border-zinc-700 font-bold shadow-xs"
+                            : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800/40"
+                        }`}
+                      >
+                        <svg className="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <span>Finance</span>
+                      </button>
+                    </div>
                   </div>
 
-                  <div className="flex items-center justify-between text-xs text-zinc-500 pt-1">
-                    <span>💡 Tip: Click column headers or range-select cells to merge columns in real-time.</span>
-                    <span className="text-zinc-400">Sync delay: &lt; 150ms</span>
+                  {/* Nav Group 2: OPERATIONS & TOOLS */}
+                  <div className="space-y-1">
+                    <p className="px-2 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">
+                      OPERATIONS & TOOLS
+                    </p>
+                    <div className="space-y-0.5">
+                      <button
+                        onClick={() => setActiveTab("calendar")}
+                        className={`w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-xl text-xs font-medium transition cursor-pointer text-left ${
+                          activeTab === "calendar"
+                            ? "bg-blue-50 text-blue-700 border border-blue-200/80 dark:bg-zinc-800 dark:text-white dark:border-zinc-700 font-bold shadow-xs"
+                            : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800/40"
+                        }`}
+                      >
+                        <svg className="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 9v7.5" />
+                        </svg>
+                        <span>Calendar</span>
+                      </button>
+
+                      <button
+                        onClick={() => setActiveTab("drive")}
+                        className={`w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-xl text-xs font-medium transition cursor-pointer text-left ${
+                          activeTab === "drive"
+                            ? "bg-blue-50 text-blue-700 border border-blue-200/80 dark:bg-zinc-800 dark:text-white dark:border-zinc-700 font-bold shadow-xs"
+                            : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800/40"
+                        }`}
+                      >
+                        <svg className="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
+                        </svg>
+                        <span>Drive BYO</span>
+                      </button>
+
+                      <button
+                        onClick={() => setActiveTab("vault")}
+                        className={`w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-xl text-xs font-medium transition cursor-pointer text-left ${
+                          activeTab === "vault"
+                            ? "bg-blue-50 text-blue-700 border border-blue-200/80 dark:bg-zinc-800 dark:text-white dark:border-zinc-700 font-bold shadow-xs"
+                            : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800/40"
+                        }`}
+                      >
+                        <svg className="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
+                        </svg>
+                        <span>Secret Vault</span>
+                      </button>
+                    </div>
                   </div>
                 </div>
-              )}
 
-              {activeTab === "calendar" && (
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h4 className="text-sm font-bold text-zinc-900 dark:text-white">Live Calendar & Video Meet Engine</h4>
-                      <p className="text-xs text-zinc-500">Pick a slot below to see instant Google Meet link generation</p>
-                    </div>
-                    <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
-                      Calendly Alternative
-                    </span>
+                {/* Bottom of Sidebar: Role badge */}
+                <div className="pt-3 border-t border-zinc-200 dark:border-zinc-800">
+                  <div className="flex items-center gap-2 px-1">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                    <span className="text-[11px] font-semibold text-zinc-600 dark:text-zinc-300">Admin Account</span>
                   </div>
+                  <p className="text-[10px] text-zinc-400 px-1 mt-0.5">admin@mymanager.io</p>
+                </div>
+              </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <p className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Available Meeting Slots Today</p>
-                      <div className="grid grid-cols-2 gap-2">
-                        {[
-                          { id: "today-2pm", time: "2:00 PM - 2:30 PM", label: "Strategy Call" },
-                          { id: "today-4pm", time: "4:00 PM - 4:45 PM", label: "Product Demo" },
-                          { id: "tomorrow-10am", time: "Tomorrow 10:00 AM", label: "Onboarding" },
-                          { id: "tomorrow-3pm", time: "Tomorrow 3:00 PM", label: "Discovery" },
-                        ].map((slot) => (
-                          <button
-                            key={slot.id}
-                            onClick={() => setSelectedSlot(slot.id)}
-                            className={`p-3 rounded-xl text-left transition-all cursor-pointer border ${
-                              selectedSlot === slot.id
-                                ? "bg-blue-50 dark:bg-blue-950/50 border-blue-500 text-blue-900 dark:text-blue-200 shadow-xs"
-                                : "bg-white dark:bg-zinc-900/60 border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 hover:border-zinc-300"
-                            }`}
-                          >
-                            <p className="font-bold text-xs">{slot.label}</p>
-                            <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5">{slot.time}</p>
-                          </button>
-                        ))}
+              {/* Right Content Area */}
+              <div className="flex-1 p-5 md:p-6 bg-white dark:bg-[#111114] flex flex-col justify-between overflow-hidden">
+                {/* 1. Dashboard View */}
+                {activeTab === "dashboard" && (
+                  <div className="space-y-4">
+                    <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-zinc-100 dark:border-zinc-800">
+                      <div>
+                        <h4 className="text-sm font-bold text-zinc-900 dark:text-white">Agency Executive Dashboard</h4>
+                        <p className="text-xs text-zinc-500">Live operational overview across Google Workspace & CRM</p>
+                      </div>
+                      <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 flex items-center gap-1.5">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" />
+                        All Systems Operational
+                      </span>
+                    </div>
+
+                    {/* 4 Stat Cards */}
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                      <div className="p-3.5 rounded-2xl bg-zinc-50 dark:bg-zinc-900/60 border border-zinc-200 dark:border-zinc-800 space-y-1">
+                        <p className="text-[11px] font-medium text-zinc-500">Active CRM Leads</p>
+                        <p className="text-xl font-extrabold text-zinc-900 dark:text-white">1,420</p>
+                        <p className="text-[10px] text-emerald-600 font-semibold">+14% this month</p>
+                      </div>
+                      <div className="p-3.5 rounded-2xl bg-zinc-50 dark:bg-zinc-900/60 border border-zinc-200 dark:border-zinc-800 space-y-1">
+                        <p className="text-[11px] font-medium text-zinc-500">Pipeline Value</p>
+                        <p className="text-xl font-extrabold text-zinc-900 dark:text-white">₹48.5L</p>
+                        <p className="text-[10px] text-blue-600 font-semibold">28 Active Deals</p>
+                      </div>
+                      <div className="p-3.5 rounded-2xl bg-zinc-50 dark:bg-zinc-900/60 border border-zinc-200 dark:border-zinc-800 space-y-1">
+                        <p className="text-[11px] font-medium text-zinc-500">Synced Sheets</p>
+                        <p className="text-xl font-extrabold text-zinc-900 dark:text-white">12 Sheets</p>
+                        <p className="text-[10px] text-emerald-600 font-semibold">&lt; 150ms 2-Way Sync</p>
+                      </div>
+                      <div className="p-3.5 rounded-2xl bg-zinc-50 dark:bg-zinc-900/60 border border-zinc-200 dark:border-zinc-800 space-y-1">
+                        <p className="text-[11px] font-medium text-zinc-500">Meet Bookings</p>
+                        <p className="text-xl font-extrabold text-zinc-900 dark:text-white">38 Calls</p>
+                        <p className="text-[10px] text-purple-600 font-semibold">Zero Collisions</p>
                       </div>
                     </div>
 
-                    <div className="p-4 rounded-xl bg-white dark:bg-[#111114] border border-zinc-200 dark:border-zinc-800 flex flex-col justify-between">
+                    {/* Recent Activity Feed */}
+                    <div className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/40 p-3.5 space-y-2.5">
+                      <p className="text-xs font-bold text-zinc-900 dark:text-white">Live Activity Stream</p>
+                      <div className="space-y-2 text-xs">
+                        <div className="flex items-center justify-between text-zinc-700 dark:text-zinc-300">
+                          <span className="flex items-center gap-2">
+                            <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                            <span>Apex Digital Labs marked as <strong>Converted (₹1.2L)</strong></span>
+                          </span>
+                          <span className="text-[10px] text-zinc-400">2m ago</span>
+                        </div>
+                        <div className="flex items-center justify-between text-zinc-700 dark:text-zinc-300">
+                          <span className="flex items-center gap-2">
+                            <span className="w-2 h-2 rounded-full bg-blue-500" />
+                            <span>Strategy Session booked by <strong>Horizon Tech</strong> via Google Meet</span>
+                          </span>
+                          <span className="text-[10px] text-zinc-400">14m ago</span>
+                        </div>
+                        <div className="flex items-center justify-between text-zinc-700 dark:text-zinc-300">
+                          <span className="flex items-center gap-2">
+                            <span className="w-2 h-2 rounded-full bg-purple-500" />
+                            <span>Invoice proof uploaded to Google Drive: <strong>`Finance_Receipts`</strong></span>
+                          </span>
+                          <span className="text-[10px] text-zinc-400">1h ago</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* 2. Leads View */}
+                {activeTab === "leads" && (
+                  <div className="space-y-4">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
                       <div>
-                        <div className="flex items-center justify-between pb-2 border-b border-zinc-100 dark:border-zinc-800">
-                          <span className="font-bold text-xs text-zinc-900 dark:text-white">Active Google Meet Link</span>
-                          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-                            Ready to Join
+                        <div className="flex items-center gap-2">
+                          <h4 className="text-sm font-bold text-zinc-900 dark:text-white">Active Pipeline & Spreadsheet Grid</h4>
+                          <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+                            Merged Cells Enabled
                           </span>
                         </div>
-                        <div className="mt-3 space-y-1.5">
-                          <p className="text-xs text-zinc-600 dark:text-zinc-400 font-medium">
-                            Room: <span className="font-mono text-zinc-900 dark:text-white font-bold">meet.google.com/xyz-mymanager-live</span>
-                          </p>
-                          <p className="text-[11px] text-zinc-500">
-                            Automatic invitations dispatched to admin & client calendars with 10-minute reminders.
-                          </p>
-                        </div>
+                        <p className="text-xs text-zinc-500 mt-0.5">Bi-directionally synced with Google Sheet #1BxiMVs0XRA5n...</p>
                       </div>
 
-                      <div className="pt-3 border-t border-zinc-100 dark:border-zinc-800 flex items-center justify-between">
-                        <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1">
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                          Zero Calendar Collisions
-                        </span>
-                        <Link
-                          href="/book"
-                          className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs transition active:scale-97"
-                        >
-                          Book via Meet →
-                        </Link>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {activeTab === "drive" && (
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h4 className="text-sm font-bold text-zinc-900 dark:text-white">BYO-Storage (Google Drive Native)</h4>
-                      <p className="text-xs text-zinc-500">Files stream directly into Admin's Google Drive — No third-party AWS S3 charges</p>
-                    </div>
-                    <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-                      Zero Storage Markup
-                    </span>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    <div className="p-4 rounded-xl bg-white dark:bg-[#111114] border border-zinc-200 dark:border-zinc-800 space-y-1.5">
-                      <div className="flex items-center justify-between">
-                        <span className="font-bold text-xs text-zinc-900 dark:text-white">📁 Finance_Receipts</span>
-                        <span className="text-[10px] text-zinc-400">184 Files</span>
-                      </div>
-                      <p className="text-xs text-zinc-500">Invoices, audit logs, and transaction proofs</p>
-                      <div className="pt-2 flex items-center justify-between text-[11px] text-zinc-400">
-                        <span>Drive Storage</span>
-                        <span className="font-bold text-emerald-600">Free (Included)</span>
-                      </div>
-                    </div>
-
-                    <div className="p-4 rounded-xl bg-white dark:bg-[#111114] border border-zinc-200 dark:border-zinc-800 space-y-1.5">
-                      <div className="flex items-center justify-between">
-                        <span className="font-bold text-xs text-zinc-900 dark:text-white">📁 Instagram_Media</span>
-                        <span className="text-[10px] text-zinc-400">320 Assets</span>
-                      </div>
-                      <p className="text-xs text-zinc-500">Carousels, reels, scheduled post media</p>
-                      <div className="pt-2 flex items-center justify-between text-[11px] text-zinc-400">
-                        <span>Drive Storage</span>
-                        <span className="font-bold text-emerald-600">Free (Included)</span>
-                      </div>
-                    </div>
-
-                    <div className="p-4 rounded-xl bg-white dark:bg-[#111114] border border-zinc-200 dark:border-zinc-800 space-y-1.5">
-                      <div className="flex items-center justify-between">
-                        <span className="font-bold text-xs text-zinc-900 dark:text-white">📁 Team_Vault_Backups</span>
-                        <span className="text-[10px] text-zinc-400">48 Snapshots</span>
-                      </div>
-                      <p className="text-xs text-zinc-500">Encrypted weekly database backups</p>
-                      <div className="pt-2 flex items-center justify-between text-[11px] text-zinc-400">
-                        <span>Drive Storage</span>
-                        <span className="font-bold text-emerald-600">Free (Included)</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {activeTab === "vault" && (
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h4 className="text-sm font-bold text-zinc-900 dark:text-white">AES-256-GCM Encrypted Credential Vault</h4>
-                      <p className="text-xs text-zinc-500">Secure production keys with granular team RBAC & audit logging</p>
-                    </div>
-                    <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20">
-                      Zero-Knowledge Architecture
-                    </span>
-                  </div>
-
-                  <div className="p-4 rounded-xl bg-white dark:bg-[#111114] border border-zinc-200 dark:border-zinc-800 space-y-3">
-                    <div className="flex items-center justify-between pb-2 border-b border-zinc-100 dark:border-zinc-800">
                       <div className="flex items-center gap-2">
-                        <span className="w-7 h-7 rounded-lg bg-amber-500/10 text-amber-500 flex items-center justify-center font-bold text-xs">🔑</span>
-                        <div>
-                          <p className="font-bold text-xs text-zinc-900 dark:text-white">Stripe Live Production Secret Key</p>
-                          <p className="text-[11px] text-zinc-400">Last accessed 2 hours ago by Admin</p>
+                        <div className="flex items-center gap-1 bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg p-0.5 text-[11px]">
+                          <button
+                            onClick={() => setLeadStatusFilter("all")}
+                            className={`px-2 py-0.5 rounded cursor-pointer ${leadStatusFilter === "all" ? "bg-blue-600 text-white font-semibold" : "text-zinc-500"}`}
+                          >
+                            All
+                          </button>
+                          <button
+                            onClick={() => setLeadStatusFilter("converted")}
+                            className={`px-2 py-0.5 rounded cursor-pointer ${leadStatusFilter === "converted" ? "bg-emerald-600 text-white font-semibold" : "text-zinc-500"}`}
+                          >
+                            Converted
+                          </button>
+                          <button
+                            onClick={() => setLeadStatusFilter("contacted")}
+                            className={`px-2 py-0.5 rounded cursor-pointer ${leadStatusFilter === "contacted" ? "bg-blue-600 text-white font-semibold" : "text-zinc-500"}`}
+                          >
+                            Contacted
+                          </button>
                         </div>
+
+                        <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 flex items-center gap-1.5 shrink-0">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" />
+                          Live 2-Way Sync
+                        </span>
                       </div>
-                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-                        AES Encrypted
+                    </div>
+
+                    <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#111114] overflow-hidden text-xs shadow-xs">
+                      <table className="w-full text-left">
+                        <thead className="bg-zinc-50 dark:bg-zinc-900/70 border-b border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400">
+                          <tr>
+                            <th className="px-4 py-2.5 font-bold">Client / Company</th>
+                            <th className="px-4 py-2.5 font-bold">Category</th>
+                            <th className="px-4 py-2.5 font-bold">Deal Status</th>
+                            <th className="px-4 py-2.5 font-bold">Phone / Contact</th>
+                            <th className="px-4 py-2.5 font-bold">Priority</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800/60">
+                          {(leadStatusFilter === "all" || leadStatusFilter === "converted") && (
+                            <tr className="hover:bg-slate-50 dark:hover:bg-zinc-900/40 transition">
+                              <td className="px-4 py-3 font-semibold text-zinc-900 dark:text-white flex items-center gap-2">
+                                <span className="w-6 h-6 rounded-lg bg-blue-500/10 text-blue-600 flex items-center justify-center font-bold text-[10px]">A</span>
+                                <span>Apex Digital Labs</span>
+                              </td>
+                              <td className="px-4 py-3 text-zinc-500">SaaS / Enterprise</td>
+                              <td className="px-4 py-3">
+                                <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 font-bold text-[11px]">
+                                  Converted
+                                </span>
+                              </td>
+                              <td className="px-4 py-3 text-zinc-500 font-mono">+1 (555) 392-1829</td>
+                              <td className="px-4 py-3 text-amber-500 font-bold">★ High (₹1.2L)</td>
+                            </tr>
+                          )}
+                          {(leadStatusFilter === "all" || leadStatusFilter === "contacted") && (
+                            <tr className="hover:bg-slate-50 dark:hover:bg-zinc-900/40 transition">
+                              <td className="px-4 py-3 font-semibold text-zinc-900 dark:text-white flex items-center gap-2">
+                                <span className="w-6 h-6 rounded-lg bg-purple-500/10 text-purple-600 flex items-center justify-center font-bold text-[10px]">H</span>
+                                <span>Horizon Tech Studio</span>
+                              </td>
+                              <td className="px-4 py-3 text-zinc-500">Design Agency</td>
+                              <td className="px-4 py-3">
+                                <span className="px-2.5 py-0.5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 font-bold text-[11px]">
+                                  Contacted
+                                </span>
+                              </td>
+                              <td className="px-4 py-3 text-zinc-500 font-mono">+1 (555) 781-9920</td>
+                              <td className="px-4 py-3 text-blue-500 font-bold">★ Medium (₹65k)</td>
+                            </tr>
+                          )}
+                          {leadStatusFilter === "all" && (
+                            <tr className="hover:bg-slate-50 dark:hover:bg-zinc-900/40 transition">
+                              <td className="px-4 py-3 font-semibold text-zinc-900 dark:text-white flex items-center gap-2">
+                                <span className="w-6 h-6 rounded-lg bg-amber-500/10 text-amber-600 flex items-center justify-center font-bold text-[10px]">L</span>
+                                <span>Lumina Growth Agency</span>
+                              </td>
+                              <td className="px-4 py-3 text-zinc-500">Performance Marketing</td>
+                              <td className="px-4 py-3">
+                                <span className="px-2.5 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 font-bold text-[11px]">
+                                  Proposal Sent
+                                </span>
+                              </td>
+                              <td className="px-4 py-3 text-zinc-500 font-mono">+1 (555) 431-0021</td>
+                              <td className="px-4 py-3 text-purple-500 font-bold">★ High (₹2.4L)</td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    <div className="flex items-center justify-between text-xs text-zinc-500 pt-1">
+                      <span>💡 Tip: Click column headers or range-select cells to merge columns in real-time.</span>
+                      <span className="text-zinc-400">Sync delay: &lt; 150ms</span>
+                    </div>
+                  </div>
+                )}
+
+                {/* 3. Calendar View */}
+                {activeTab === "calendar" && (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h4 className="text-sm font-bold text-zinc-900 dark:text-white">Live Calendar & Video Meet Engine</h4>
+                        <p className="text-xs text-zinc-500">Pick a slot below to see instant Google Meet link generation</p>
+                      </div>
+                      <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+                        Calendly Alternative
                       </span>
                     </div>
 
-                    <div className="flex items-center justify-between gap-3 bg-slate-50 dark:bg-zinc-900/60 p-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 font-mono text-xs">
-                      <span className="truncate text-zinc-800 dark:text-zinc-200">
-                        {revealedVaultKey ? "sk_live_51Mza89Bv2k0Pq1x93Kl92aPq0981" : "sk_live_••••••••••••••••••••••••••••••••"}
-                      </span>
-                      <div className="flex items-center gap-2 shrink-0">
-                        <button
-                          onClick={() => setRevealedVaultKey(!revealedVaultKey)}
-                          className="px-2.5 py-1 rounded-lg bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-[11px] font-semibold transition cursor-pointer"
-                        >
-                          {revealedVaultKey ? "Hide" : "Reveal"}
-                        </button>
-                        <button
-                          onClick={handleCopyKey}
-                          className="px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-semibold transition cursor-pointer active:scale-95"
-                        >
-                          {copiedKey ? "Copied! ✓" : "Copy"}
-                        </button>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <p className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Available Meeting Slots Today</p>
+                        <div className="grid grid-cols-2 gap-2">
+                          {[
+                            { id: "today-2pm", time: "2:00 PM - 2:30 PM", label: "Strategy Call" },
+                            { id: "today-4pm", time: "4:00 PM - 4:45 PM", label: "Product Demo" },
+                            { id: "tomorrow-10am", time: "Tomorrow 10:00 AM", label: "Onboarding" },
+                            { id: "tomorrow-3pm", time: "Tomorrow 3:00 PM", label: "Discovery" },
+                          ].map((slot) => (
+                            <button
+                              key={slot.id}
+                              onClick={() => setSelectedSlot(slot.id)}
+                              className={`p-3 rounded-xl text-left transition-all cursor-pointer border ${
+                                selectedSlot === slot.id
+                                  ? "bg-blue-50 dark:bg-blue-950/50 border-blue-500 text-blue-900 dark:text-blue-200 shadow-xs"
+                                  : "bg-white dark:bg-zinc-900/60 border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 hover:border-zinc-300"
+                              }`}
+                            >
+                              <p className="font-bold text-xs">{slot.label}</p>
+                              <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5">{slot.time}</p>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="p-4 rounded-xl bg-zinc-50 dark:bg-[#151518] border border-zinc-200 dark:border-zinc-800 flex flex-col justify-between">
+                        <div>
+                          <div className="flex items-center justify-between pb-2 border-b border-zinc-200/80 dark:border-zinc-800">
+                            <span className="font-bold text-xs text-zinc-900 dark:text-white">Active Google Meet Link</span>
+                            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                              Ready to Join
+                            </span>
+                          </div>
+                          <div className="mt-3 space-y-1.5">
+                            <p className="text-xs text-zinc-600 dark:text-zinc-400 font-medium">
+                              Room: <span className="font-mono text-zinc-900 dark:text-white font-bold">meet.google.com/xyz-mymanager-live</span>
+                            </p>
+                            <p className="text-[11px] text-zinc-500">
+                              Automatic invitations dispatched to admin & client calendars with 10-minute reminders.
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="pt-3 border-t border-zinc-200/80 dark:border-zinc-800 flex items-center justify-between">
+                          <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                            Zero Collisions
+                          </span>
+                          <Link
+                            href="/book"
+                            className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs transition active:scale-97 cursor-pointer"
+                          >
+                            Book via Meet →
+                          </Link>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              )}
+                )}
+
+                {/* 4. Form Submissions View */}
+                {activeTab === "forms" && (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h4 className="text-sm font-bold text-zinc-900 dark:text-white">Customer Form Inquiries & MX Validation</h4>
+                        <p className="text-xs text-zinc-500">Instant spam protection with automated DNS MX domain verification</p>
+                      </div>
+                      <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20">
+                        Zero Spam Leads
+                      </span>
+                    </div>
+
+                    <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#111114] overflow-hidden text-xs shadow-xs">
+                      <table className="w-full text-left">
+                        <thead className="bg-zinc-50 dark:bg-zinc-900/70 border-b border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400">
+                          <tr>
+                            <th className="px-4 py-2.5 font-bold">Prospect / Company</th>
+                            <th className="px-4 py-2.5 font-bold">Email & MX Status</th>
+                            <th className="px-4 py-2.5 font-bold">Requested Scope</th>
+                            <th className="px-4 py-2.5 font-bold">Action</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800/60">
+                          <tr className="hover:bg-slate-50 dark:hover:bg-zinc-900/40 transition">
+                            <td className="px-4 py-3 font-semibold text-zinc-900 dark:text-white">
+                              Marcus Vance • Zenith Media
+                            </td>
+                            <td className="px-4 py-3">
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold text-[10px]">
+                                ✓ MX Verified (zenith.co)
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 text-zinc-500">Need full agency workspace migration for 15 managers</td>
+                            <td className="px-4 py-3">
+                              <button className="px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-bold text-[10px] cursor-pointer">
+                                Convert to Deal
+                              </button>
+                            </td>
+                          </tr>
+                          <tr className="hover:bg-slate-50 dark:hover:bg-zinc-900/40 transition">
+                            <td className="px-4 py-3 font-semibold text-zinc-900 dark:text-white">
+                              Elena Rostova • CyberEdge
+                            </td>
+                            <td className="px-4 py-3">
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold text-[10px]">
+                                ✓ MX Verified (cyberedge.dev)
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 text-zinc-500">Looking for Google Sheets 2-way sync with custom formula cells</td>
+                            <td className="px-4 py-3">
+                              <button className="px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-bold text-[10px] cursor-pointer">
+                                Convert to Deal
+                              </button>
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+
+                {/* 5. Finance View */}
+                {activeTab === "finance" && (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h4 className="text-sm font-bold text-zinc-900 dark:text-white">Agency Finance & Transaction Proofs</h4>
+                        <p className="text-xs text-zinc-500">Client payments, receipts, and invoice verification</p>
+                      </div>
+                      <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                        Auto-Matched
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <div className="p-3.5 rounded-2xl bg-zinc-50 dark:bg-zinc-900/60 border border-zinc-200 dark:border-zinc-800">
+                        <p className="text-[11px] text-zinc-500">Monthly Revenue</p>
+                        <p className="text-lg font-bold text-zinc-900 dark:text-white mt-1">₹14,80,000</p>
+                        <p className="text-[10px] text-emerald-600 mt-0.5">100% Collected</p>
+                      </div>
+                      <div className="p-3.5 rounded-2xl bg-zinc-50 dark:bg-zinc-900/60 border border-zinc-200 dark:border-zinc-800">
+                        <p className="text-[11px] text-zinc-500">Pending Invoices</p>
+                        <p className="text-lg font-bold text-zinc-900 dark:text-white mt-1">₹1,45,000</p>
+                        <p className="text-[10px] text-amber-500 mt-0.5">2 Clients Pending</p>
+                      </div>
+                      <div className="p-3.5 rounded-2xl bg-zinc-50 dark:bg-zinc-900/60 border border-zinc-200 dark:border-zinc-800">
+                        <p className="text-[11px] text-zinc-500">Drive Receipt Storage</p>
+                        <p className="text-lg font-bold text-zinc-900 dark:text-white mt-1">184 Proofs</p>
+                        <p className="text-[10px] text-blue-500 mt-0.5">Direct to Google Drive</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* 6. Drive View */}
+                {activeTab === "drive" && (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h4 className="text-sm font-bold text-zinc-900 dark:text-white">BYO-Storage (Google Drive Native)</h4>
+                        <p className="text-xs text-zinc-500">Files stream directly into Admin's Google Drive — No third-party AWS S3 charges</p>
+                      </div>
+                      <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                        Zero Storage Markup
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <div className="p-4 rounded-xl bg-zinc-50 dark:bg-zinc-900/60 border border-zinc-200 dark:border-zinc-800 space-y-1.5">
+                        <div className="flex items-center justify-between">
+                          <span className="font-bold text-xs text-zinc-900 dark:text-white">📁 Finance_Receipts</span>
+                          <span className="text-[10px] text-zinc-400">184 Files</span>
+                        </div>
+                        <p className="text-xs text-zinc-500">Invoices, audit logs, and transaction proofs</p>
+                        <div className="pt-2 flex items-center justify-between text-[11px] text-zinc-400">
+                          <span>Drive Storage</span>
+                          <span className="font-bold text-emerald-600">Free (Included)</span>
+                        </div>
+                      </div>
+
+                      <div className="p-4 rounded-xl bg-zinc-50 dark:bg-zinc-900/60 border border-zinc-200 dark:border-zinc-800 space-y-1.5">
+                        <div className="flex items-center justify-between">
+                          <span className="font-bold text-xs text-zinc-900 dark:text-white">📁 Instagram_Media</span>
+                          <span className="text-[10px] text-zinc-400">320 Assets</span>
+                        </div>
+                        <p className="text-xs text-zinc-500">Carousels, reels, scheduled post media</p>
+                        <div className="pt-2 flex items-center justify-between text-[11px] text-zinc-400">
+                          <span>Drive Storage</span>
+                          <span className="font-bold text-emerald-600">Free (Included)</span>
+                        </div>
+                      </div>
+
+                      <div className="p-4 rounded-xl bg-zinc-50 dark:bg-zinc-900/60 border border-zinc-200 dark:border-zinc-800 space-y-1.5">
+                        <div className="flex items-center justify-between">
+                          <span className="font-bold text-xs text-zinc-900 dark:text-white">📁 Team_Vault_Backups</span>
+                          <span className="text-[10px] text-zinc-400">48 Snapshots</span>
+                        </div>
+                        <p className="text-xs text-zinc-500">Encrypted weekly database backups</p>
+                        <div className="pt-2 flex items-center justify-between text-[11px] text-zinc-400">
+                          <span>Drive Storage</span>
+                          <span className="font-bold text-emerald-600">Free (Included)</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* 7. Vault View */}
+                {activeTab === "vault" && (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h4 className="text-sm font-bold text-zinc-900 dark:text-white">AES-256-GCM Encrypted Credential Vault</h4>
+                        <p className="text-xs text-zinc-500">Secure production keys with granular team RBAC & audit logging</p>
+                      </div>
+                      <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20">
+                        Zero-Knowledge Architecture
+                      </span>
+                    </div>
+
+                    <div className="p-4 rounded-xl bg-zinc-50 dark:bg-zinc-900/60 border border-zinc-200 dark:border-zinc-800 space-y-3">
+                      <div className="flex items-center justify-between pb-2 border-b border-zinc-200 dark:border-zinc-800">
+                        <div className="flex items-center gap-2">
+                          <span className="w-7 h-7 rounded-lg bg-amber-500/10 text-amber-500 flex items-center justify-center font-bold text-xs">🔑</span>
+                          <div>
+                            <p className="font-bold text-xs text-zinc-900 dark:text-white">Stripe Live Production Secret Key</p>
+                            <p className="text-[11px] text-zinc-400">Last accessed 2 hours ago by Admin</p>
+                          </div>
+                        </div>
+                        <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                          AES Encrypted
+                        </span>
+                      </div>
+
+                      <div className="flex items-center justify-between gap-3 bg-white dark:bg-[#18181b] p-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 font-mono text-xs">
+                        <span className="truncate text-zinc-800 dark:text-zinc-200">
+                          {revealedVaultKey ? "sk_live_51Mza89Bv2k0Pq1x93Kl92aPq0981" : "sk_live_••••••••••••••••••••••••••••••••"}
+                        </span>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <button
+                            onClick={() => setRevealedVaultKey(!revealedVaultKey)}
+                            className="px-2.5 py-1 rounded-lg bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-[11px] font-semibold transition cursor-pointer"
+                          >
+                            {revealedVaultKey ? "Hide" : "Reveal"}
+                          </button>
+                          <button
+                            onClick={handleCopyKey}
+                            className="px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-semibold transition cursor-pointer active:scale-95"
+                          >
+                            {copiedKey ? "Copied! ✓" : "Copy"}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>

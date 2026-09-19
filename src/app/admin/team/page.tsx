@@ -477,8 +477,8 @@ export default function TeamPage() {
               onClick={() => setFilterRole(tab.key)}
               className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-all duration-150 cursor-pointer shrink-0 ${
                 filterRole === tab.key
-                  ? "bg-zinc-800 text-zinc-100 font-semibold shadow-xs border border-zinc-700/50"
-                  : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/40"
+                  ? "bg-white text-zinc-900 shadow-xs border border-zinc-200/80 dark:bg-zinc-800 dark:text-zinc-100 dark:border-zinc-700/50 font-semibold"
+                  : "text-zinc-600 hover:text-zinc-900 hover:bg-white/60 dark:text-zinc-400 dark:hover:text-zinc-200 dark:hover:bg-zinc-800/60 border border-transparent"
               }`}
             >
               {tab.label}
@@ -491,18 +491,18 @@ export default function TeamPage() {
       <div className="bg-white dark:bg-[#111114] border border-zinc-200 dark:border-zinc-800 rounded-2xl overflow-hidden shadow-xs">
         {loading ? (
           <div className="flex flex-col items-center justify-center py-24 gap-3">
-            <div className="w-7 h-7 border-2 border-zinc-600 border-t-white rounded-full animate-spin" />
+            <div className="w-7 h-7 border-2 border-zinc-400 dark:border-zinc-600 border-t-blue-600 rounded-full animate-spin" />
             <p className="text-xs text-zinc-500">Loading team members...</p>
           </div>
         ) : filteredMembers.length === 0 ? (
           <div className="text-center py-20 px-4">
-            <div className="w-12 h-12 rounded-full bg-zinc-800/50 text-zinc-400 flex items-center justify-center mx-auto mb-3 border border-zinc-700/50">
+            <div className="w-12 h-12 rounded-full bg-slate-100 dark:bg-zinc-800/50 text-zinc-500 dark:text-zinc-400 flex items-center justify-center mx-auto mb-3 border border-zinc-200 dark:border-zinc-700/50">
               <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" />
               </svg>
             </div>
-            <p className="text-sm font-semibold text-zinc-200">No team members found</p>
-            <p className="text-xs text-zinc-400 mt-1 max-w-sm mx-auto">
+            <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-200">No team members found</p>
+            <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1 max-w-sm mx-auto">
               {search ? "Try adjusting your search query or filter" : "Get started by adding your first team member"}
             </p>
             {!search && (

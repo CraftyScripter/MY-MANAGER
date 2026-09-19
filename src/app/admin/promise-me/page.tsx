@@ -566,8 +566,8 @@ export default function FormSubmissionsPage() {
             onClick={() => { setDomainStatusFilter("all"); setPage(1); }}
             className={`px-3 py-1.5 rounded-lg text-xs font-medium cursor-pointer transition ${
               domainStatusFilter === "all"
-                ? "bg-zinc-800 text-zinc-100 font-semibold shadow-xs border border-zinc-700/50"
-                : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/40"
+                ? "bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 font-semibold shadow-xs border border-zinc-200/80 dark:border-zinc-700/50"
+                : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200 hover:bg-zinc-200/60 dark:hover:bg-zinc-800/40"
             }`}
           >
             All Submissions ({stats.total})
@@ -576,8 +576,8 @@ export default function FormSubmissionsPage() {
             onClick={() => { setDomainStatusFilter("valid"); setPage(1); }}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium cursor-pointer transition ${
               domainStatusFilter === "valid"
-                ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 font-semibold"
-                : "text-emerald-400/80 hover:bg-emerald-950/40 hover:text-emerald-300"
+                ? "bg-emerald-100 text-emerald-800 border border-emerald-300 dark:bg-emerald-500/15 dark:text-emerald-400 dark:border-emerald-500/30 font-semibold shadow-xs"
+                : "text-emerald-700 hover:bg-emerald-50 hover:text-emerald-900 dark:text-emerald-400/80 dark:hover:bg-emerald-950/40 dark:hover:text-emerald-300"
             }`}
           >
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
@@ -587,8 +587,8 @@ export default function FormSubmissionsPage() {
             onClick={() => { setDomainStatusFilter("invalid"); setPage(1); }}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium cursor-pointer transition ${
               domainStatusFilter === "invalid"
-                ? "bg-red-500/10 text-red-400 border border-red-500/30 font-semibold"
-                : "text-red-400/80 hover:bg-red-950/40 hover:text-red-300"
+                ? "bg-red-100 text-red-800 border border-red-300 dark:bg-red-500/15 dark:text-red-400 dark:border-red-500/30 font-semibold shadow-xs"
+                : "text-red-700 hover:bg-red-50 hover:text-red-900 dark:text-red-400/80 dark:hover:bg-red-950/40 dark:hover:text-red-300"
             }`}
           >
             <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
@@ -601,7 +601,7 @@ export default function FormSubmissionsPage() {
           <div className="flex items-center gap-1.5">
             <button
               onClick={selectInvalidOnly}
-              className="flex items-center gap-1.5 h-8 px-3 rounded-lg text-xs font-medium text-zinc-300 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 transition-colors cursor-pointer shadow-xs"
+              className="flex items-center gap-1.5 h-8 px-3 rounded-lg text-xs font-medium text-zinc-700 dark:text-zinc-300 bg-white dark:bg-zinc-900 hover:bg-zinc-100 dark:hover:bg-zinc-800 border border-zinc-200 dark:border-zinc-800 transition-colors cursor-pointer shadow-xs"
               title="Select only the invalid domain submissions"
             >
               <svg className="w-3.5 h-3.5 text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
@@ -618,7 +618,7 @@ export default function FormSubmissionsPage() {
                   count: stats.invalidCount,
                 })
               }
-              className="flex items-center gap-1.5 h-8 px-3 rounded-lg text-xs font-medium text-red-400 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 transition-colors cursor-pointer shadow-xs"
+              className="flex items-center gap-1.5 h-8 px-3 rounded-lg text-xs font-medium text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-500/10 hover:bg-red-100 dark:hover:bg-red-500/20 border border-red-200 dark:border-red-500/20 transition-colors cursor-pointer shadow-xs"
               title="Delete all invalid domain submissions from the database"
             >
               <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
@@ -682,7 +682,7 @@ export default function FormSubmissionsPage() {
           onClick={() => setShowColumnFilters((prev) => !prev)}
           className={`flex items-center gap-2 px-3.5 py-2 text-xs font-semibold rounded-xl border transition-all duration-150 cursor-pointer shadow-xs shrink-0 active:scale-97 ${
             showColumnFilters || senderFilter || emailFilter
-              ? "bg-zinc-800 text-zinc-100 font-semibold shadow-xs border-zinc-700"
+              ? "bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-900/60 shadow-xs font-bold"
               : "bg-white dark:bg-[#111114] text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700"
           }`}
           title="Toggle column-based search and filter inputs"
@@ -738,14 +738,14 @@ export default function FormSubmissionsPage() {
 
             <button
               onClick={selectAllOnPage}
-              className="px-3 py-1.5 text-xs font-medium rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 cursor-pointer"
+              className="px-3 py-1.5 text-xs font-medium rounded-lg bg-white dark:bg-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700 cursor-pointer shadow-xs"
             >
               Select All ({visibleIds.length})
             </button>
 
             <button
               onClick={deselectAll}
-              className="px-3 py-1.5 text-xs font-medium rounded-lg text-zinc-400 hover:text-white cursor-pointer"
+              className="px-3 py-1.5 text-xs font-medium rounded-lg text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white cursor-pointer"
             >
               Clear
             </button>
@@ -886,16 +886,18 @@ export default function FormSubmissionsPage() {
                     <tr className="border-b border-zinc-200 dark:border-zinc-800 bg-zinc-100 dark:bg-[#131316]">
                       {canWrite && <td className="px-4 py-2.5" />}
                       <td className="px-6 py-2.5">
-                        <select
+                        <DropdownSelect
                           value={selectedPlatform}
-                          onChange={(e) => { setSelectedPlatform(e.target.value); setPage(1); }}
-                          className="w-full bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-lg px-2 py-1 text-xs text-zinc-800 dark:text-zinc-200 focus:outline-none focus:ring-1 focus:ring-zinc-400"
-                        >
-                          <option value="all">All platforms</option>
-                          {platforms.map((p) => (
-                            <option key={p} value={p}>{p}</option>
-                          ))}
-                        </select>
+                          onChange={(val) => { setSelectedPlatform(val); setPage(1); }}
+                          options={[
+                            { label: "All platforms", value: "all" },
+                            ...platforms.map((p) => ({ label: p, value: p })),
+                          ]}
+                          size="sm"
+                          align="left"
+                          minWidth="160px"
+                          className="w-full"
+                        />
                       </td>
                       <td className="px-6 py-2.5">
                         <input
@@ -916,15 +918,19 @@ export default function FormSubmissionsPage() {
                         />
                       </td>
                       <td className="px-6 py-2.5">
-                        <select
+                        <DropdownSelect
                           value={domainStatusFilter}
-                          onChange={(e) => { setDomainStatusFilter(e.target.value as "all" | "valid" | "invalid"); setPage(1); }}
-                          className="w-full bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-lg px-2 py-1 text-xs text-zinc-800 dark:text-zinc-200 focus:outline-none focus:ring-1 focus:ring-zinc-400"
-                        >
-                          <option value="all">All domains</option>
-                          <option value="valid">✓ Verified MX only</option>
-                          <option value="invalid">✕ Invalid domains only</option>
-                        </select>
+                          onChange={(val) => { setDomainStatusFilter(val as "all" | "valid" | "invalid"); setPage(1); }}
+                          options={[
+                            { label: "All domains", value: "all" },
+                            { label: "✓ Verified MX only", value: "valid" },
+                            { label: "✕ Invalid domains only", value: "invalid" },
+                          ]}
+                          size="sm"
+                          align="left"
+                          minWidth="180px"
+                          className="w-full"
+                        />
                       </td>
                       <td className="px-6 py-2.5" colSpan={3}>
                         <div className="flex items-center justify-end">
@@ -1034,7 +1040,7 @@ export default function FormSubmissionsPage() {
                           <div className="flex items-center justify-end gap-2">
                             <button
                               onClick={() => setSelectedEnquiry(enq)}
-                              className="text-zinc-700 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white text-xs bg-slate-100 dark:bg-zinc-800 hover:bg-slate-200 dark:hover:bg-zinc-700 border border-zinc-200 dark:border-zinc-700 px-3 py-1.5 rounded-lg cursor-pointer"
+                              className="text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white text-xs bg-white dark:bg-zinc-800 hover:bg-slate-100 dark:hover:bg-zinc-700 border border-zinc-200 dark:border-zinc-700 px-3 py-1.5 rounded-lg cursor-pointer shadow-2xs font-medium"
                             >
                               View
                             </button>
@@ -1042,7 +1048,7 @@ export default function FormSubmissionsPage() {
                               <button
                                 onClick={() => setDeleteTarget(enq)}
                                 disabled={deleting === enq.id}
-                                className="text-zinc-400 hover:text-red-600 dark:hover:text-red-400 text-xs bg-slate-100 dark:bg-zinc-800 hover:bg-red-50 dark:hover:bg-red-950 border border-zinc-200 dark:border-zinc-700 px-3 py-1.5 rounded-lg cursor-pointer disabled:opacity-40"
+                                className="text-zinc-500 hover:text-red-600 dark:text-zinc-400 dark:hover:text-red-400 text-xs bg-white dark:bg-zinc-800 hover:bg-red-50 dark:hover:bg-red-950/50 border border-zinc-200 dark:border-zinc-700 px-3 py-1.5 rounded-lg cursor-pointer disabled:opacity-40 shadow-2xs font-medium"
                               >
                                 Delete
                               </button>
@@ -1067,22 +1073,25 @@ export default function FormSubmissionsPage() {
                 {/* Center: Rows per page selector */}
                 <div className="flex items-center gap-2 text-xs text-zinc-600 dark:text-zinc-400">
                   <span>Rows per page:</span>
-                  <select
-                    value={pageSize}
-                    onChange={(e) => {
-                      const newSize = Number(e.target.value);
-                      setPageSize(newSize);
+                  <DropdownSelect
+                    value={String(pageSize)}
+                    onChange={(val) => {
+                      setPageSize(Number(val));
                       setPage(1);
                       scrollToTop();
                     }}
-                    className="bg-white dark:bg-[#18181b] border border-zinc-300 dark:border-[#27272a] text-zinc-800 dark:text-zinc-200 rounded-lg px-2 py-1 text-xs font-semibold focus:outline-none cursor-pointer"
-                  >
-                    <option value={5}>5</option>
-                    <option value={10}>10</option>
-                    <option value={15}>15</option>
-                    <option value={20}>20</option>
-                    <option value={50}>50</option>
-                  </select>
+                    options={[
+                      { label: "5", value: "5" },
+                      { label: "10", value: "10" },
+                      { label: "15", value: "15" },
+                      { label: "20", value: "20" },
+                      { label: "50", value: "50" },
+                    ]}
+                    size="sm"
+                    direction="up"
+                    minWidth="70px"
+                    className="w-16"
+                  />
                 </div>
 
                 {/* Right: Page Navigation Buttons */}
@@ -1124,8 +1133,8 @@ export default function FormSubmissionsPage() {
                           onClick={() => { setPage(pageNum); scrollToTop(); }}
                           className={`w-7 h-7 text-xs font-semibold rounded-lg cursor-pointer transition-colors ${
                             isCurrent
-                              ? "bg-zinc-800 text-zinc-100 border border-zinc-700/50 shadow-xs"
-                              : "text-zinc-400 hover:text-white bg-zinc-900 hover:bg-zinc-800 border border-zinc-800"
+                              ? "bg-blue-600 text-white font-bold shadow-xs border border-blue-600"
+                              : "text-zinc-700 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white bg-white dark:bg-zinc-900 hover:bg-zinc-100 dark:hover:bg-zinc-800 border border-zinc-200 dark:border-zinc-800"
                           }`}
                         >
                           {pageNum}

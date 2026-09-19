@@ -11,6 +11,7 @@ interface UserProfile {
   phone?: string | null;
   role: string;
   permissions?: string[];
+  image?: string | null;
 }
 
 const SECTION_LABELS: Record<string, string> = {
@@ -156,13 +157,67 @@ export default function SettingsPage() {
     }
   }
 
-  const [activeTab, setActiveTab] = useState<"general" | "profile" | "security" | "notifications" | "integrations">("general");
+  const [activeTab, setActiveTab] = useState<"general" | "profile" | "security" | "notifications">("general");
 
-  // Mock Notification settings state for UI completeness
+  // Notification settings state with localStorage persistence
   const [notifyLeads, setNotifyLeads] = useState(true);
   const [notifyForms, setNotifyForms] = useState(true);
   const [notifySecurity, setNotifySecurity] = useState(true);
   const [weeklyDigest, setWeeklyDigest] = useState(false);
+
+  // Recent system notifications feed
+  const [notificationsList, setNotificationsList] = useState<{
+    id: string;
+    title: string;
+    description: string;
+    timestamp: string;
+    type: "form" | "lead" | "finance" | "security";
+    href: string;
+  }[]>([]);
+  const [loadingNotifications, setLoadingNotifications] = useState(false);
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("pm_notification_prefs");
+      if (saved) {
+        const p = JSON.parse(saved);
+        if (p.notifyLeads !== undefined) setNotifyLeads(p.notifyLeads);
+        if (p.notifyForms !== undefined) setNotifyForms(p.notifyForms);
+        if (p.notifySecurity !== undefined) setNotifySecurity(p.notifySecurity);
+        if (p.weeklyDigest !== undefined) setWeeklyDigest(p.weeklyDigest);
+      }
+      if (typeof window !== "undefined") {
+        const params = new URLSearchParams(window.location.search);
+        const tab = params.get("tab");
+        if (tab === "notifications" || tab === "profile" || tab === "security" || tab === "general") {
+          setActiveTab(tab);
+        }
+      }
+    } catch {}
+  }, []);
+
+  const handleTogglePref = (key: string, currentVal: boolean, setter: (val: boolean) => void) => {
+    const newVal = !currentVal;
+    setter(newVal);
+    try {
+      const saved = localStorage.getItem("pm_notification_prefs");
+      const parsed = saved ? JSON.parse(saved) : {};
+      parsed[key] = newVal;
+      localStorage.setItem("pm_notification_prefs", JSON.stringify(parsed));
+      setToast({ type: "success", message: "Notification preference updated" });
+    } catch {}
+  };
+
+  useEffect(() => {
+    if (activeTab === "notifications") {
+      setLoadingNotifications(true);
+      fetch("/api/admin/notifications")
+        .then((r) => r.json())
+        .then((data) => setNotificationsList(data.notifications || []))
+        .catch(() => {})
+        .finally(() => setLoadingNotifications(false));
+    }
+  }, [activeTab]);
 
   if (loading) {
     return (
@@ -237,7 +292,6 @@ export default function SettingsPage() {
             { id: "profile", label: "Profile", icon: "M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" },
             { id: "security", label: "Security", icon: "M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" },
             { id: "notifications", label: "Notifications", icon: "M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" },
-            { id: "integrations", label: "Integrations", icon: "M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244" },
           ] as const
         ).map((tab) => {
           const isActive = activeTab === tab.id;
@@ -247,8 +301,8 @@ export default function SettingsPage() {
               onClick={() => setActiveTab(tab.id)}
               className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all duration-150 cursor-pointer shrink-0 ${
                 isActive
-                  ? "bg-zinc-800 text-zinc-100 font-semibold shadow-xs border border-zinc-700/50"
-                  : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/60"
+                  ? "bg-white text-zinc-900 shadow-xs border border-zinc-200/80 dark:bg-zinc-800 dark:text-zinc-100 dark:border-zinc-700/50"
+                  : "text-zinc-600 hover:text-zinc-900 hover:bg-white/60 dark:text-zinc-400 dark:hover:text-zinc-200 dark:hover:bg-zinc-800/60 border border-transparent"
               }`}
             >
               <svg className="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -298,20 +352,20 @@ export default function SettingsPage() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
               <div className="p-4 rounded-xl bg-slate-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800">
-                <span className="text-xs text-zinc-400">Application Name</span>
-                <p className="text-sm font-semibold text-zinc-800 dark:text-zinc-200 mt-0.5">My Manager - Executive Hub</p>
+                <span className="text-xs text-zinc-500 dark:text-zinc-400">Application Name</span>
+                <p className="text-sm font-semibold text-zinc-800 dark:text-zinc-200 mt-0.5">My Manager</p>
               </div>
               <div className="p-4 rounded-xl bg-slate-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800">
-                <span className="text-xs text-zinc-400">Environment Mode</span>
-                <p className="text-sm font-semibold text-emerald-600 dark:text-emerald-400 mt-0.5">Production Ready</p>
-              </div>
-              <div className="p-4 rounded-xl bg-slate-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800">
-                <span className="text-xs text-zinc-400">Timezone</span>
+                <span className="text-xs text-zinc-500 dark:text-zinc-400">Primary Timezone</span>
                 <p className="text-sm font-semibold text-zinc-800 dark:text-zinc-200 mt-0.5">Asia/Kolkata (IST - UTC+05:30)</p>
               </div>
               <div className="p-4 rounded-xl bg-slate-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800">
-                <span className="text-xs text-zinc-400">Next.js Framework Version</span>
-                <p className="text-sm font-semibold text-zinc-800 dark:text-zinc-200 mt-0.5">v15.2 (Turbopack Engine)</p>
+                <span className="text-xs text-zinc-500 dark:text-zinc-400">Default Currency</span>
+                <p className="text-sm font-semibold text-zinc-800 dark:text-zinc-200 mt-0.5">INR (₹) / USD ($)</p>
+              </div>
+              <div className="p-4 rounded-xl bg-slate-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800">
+                <span className="text-xs text-zinc-500 dark:text-zinc-400">Workspace Language</span>
+                <p className="text-sm font-semibold text-zinc-800 dark:text-zinc-200 mt-0.5">English (US)</p>
               </div>
             </div>
           </div>
@@ -325,9 +379,18 @@ export default function SettingsPage() {
           <div className="bg-white dark:bg-[#111114] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-6 shadow-xs">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-5">
               <div className="flex items-center gap-4">
-                <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 border border-blue-500/30 flex items-center justify-center text-2xl font-extrabold text-white shrink-0 shadow-lg shadow-blue-500/20">
-                  {(user?.name || "U").charAt(0).toUpperCase()}
-                </div>
+                {user?.image ? (
+                  <img
+                    src={user.image}
+                    alt={user?.name || "Profile"}
+                    className="w-16 h-16 rounded-2xl object-cover border border-zinc-200 dark:border-zinc-700 shadow-md shrink-0"
+                    referrerPolicy="no-referrer"
+                  />
+                ) : (
+                  <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 border border-blue-500/30 flex items-center justify-center text-2xl font-extrabold text-white shrink-0 shadow-lg shadow-blue-500/20">
+                    {(user?.name || "U").charAt(0).toUpperCase()}
+                  </div>
+                )}
                 <div>
                   <div className="flex items-center gap-2.5 flex-wrap">
                     <h2 className="text-lg font-bold text-zinc-900 dark:text-white tracking-tight">{user?.name || "Team Member"}</h2>
@@ -349,19 +412,19 @@ export default function SettingsPage() {
                   <div className="px-3.5 py-2 rounded-xl bg-white dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700/60 flex items-center gap-2 shadow-xs">
                     <span className="text-xs text-zinc-500 dark:text-zinc-400">Access:</span>
                     <span className="text-xs font-semibold text-zinc-800 dark:text-zinc-200">
-                      {assignedSections.length} {assignedSections.length === 1 ? "Section" : "Sections"}
+                      {assignedSections.length} sections
                     </span>
                   </div>
                 )}
-                <span className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 text-xs font-medium">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 dark:bg-emerald-400" />
-                  Active Account
-                </span>
+                <div className="px-3.5 py-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                  <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">Active Account</span>
+                </div>
               </div>
             </div>
           </div>
 
-          {/* Edit Profile Information */}
+          {/* Personal Information Form */}
           <div className="bg-white dark:bg-[#111114] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-6 space-y-5 shadow-xs">
             <div className="flex items-center gap-2.5">
               <div className="w-8 h-8 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 flex items-center justify-center">
@@ -377,34 +440,34 @@ export default function SettingsPage() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="text-xs text-zinc-500 dark:text-zinc-400 font-medium block mb-1.5">Email Address</label>
+                <label className="text-xs text-zinc-700 dark:text-zinc-400 font-medium block mb-1.5">Email Address</label>
                 <input
                   type="text"
                   value={user?.email || ""}
                   disabled
-                  className="w-full bg-slate-50 dark:bg-zinc-800/40 border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 py-2.5 text-xs text-zinc-500 dark:text-zinc-400 cursor-not-allowed font-mono"
+                  className="w-full bg-slate-50 dark:bg-zinc-800/40 border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 py-2.5 text-xs text-zinc-700 dark:text-zinc-300 cursor-not-allowed font-mono shadow-xs"
                 />
               </div>
               <div>
-                <label className="text-xs text-zinc-500 dark:text-zinc-400 font-medium block mb-1.5">Full Name</label>
+                <label className="text-xs text-zinc-700 dark:text-zinc-400 font-medium block mb-1.5">Full Name</label>
                 <input
                   type="text"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   disabled={isAdmin}
                   placeholder="Your full name"
-                  className="w-full bg-white dark:bg-[#111114] border border-zinc-300 dark:border-zinc-800 rounded-xl px-4 py-2.5 text-xs text-zinc-900 dark:text-zinc-200 placeholder:text-zinc-400 dark:placeholder:text-zinc-600 focus:outline-none focus:border-zinc-400 dark:focus:border-zinc-600 transition disabled:opacity-50 disabled:cursor-not-allowed shadow-xs"
+                  className="w-full bg-white dark:bg-[#111114] border border-zinc-300 dark:border-zinc-800 rounded-xl px-4 py-2.5 text-xs text-zinc-900 dark:text-zinc-200 placeholder:text-zinc-400 dark:placeholder:text-zinc-600 focus:outline-none focus:border-blue-500 dark:focus:border-blue-500 transition disabled:bg-slate-50 dark:disabled:bg-zinc-800/30 disabled:text-zinc-700 dark:disabled:text-zinc-300 disabled:border-zinc-200 dark:disabled:border-zinc-800 disabled:cursor-not-allowed shadow-xs"
                 />
               </div>
               <div className="md:col-span-2">
-                <label className="text-xs text-zinc-500 dark:text-zinc-400 font-medium block mb-1.5">Phone Number</label>
+                <label className="text-xs text-zinc-700 dark:text-zinc-400 font-medium block mb-1.5">Phone Number</label>
                 <input
                   type="text"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   disabled={isAdmin}
                   placeholder="Phone number"
-                  className="w-full bg-white dark:bg-[#111114] border border-zinc-300 dark:border-zinc-800 rounded-xl px-4 py-2.5 text-xs text-zinc-900 dark:text-zinc-200 placeholder:text-zinc-400 dark:placeholder:text-zinc-600 focus:outline-none focus:border-zinc-400 dark:focus:border-zinc-600 transition disabled:opacity-50 disabled:cursor-not-allowed shadow-xs"
+                  className="w-full bg-white dark:bg-[#111114] border border-zinc-300 dark:border-zinc-800 rounded-xl px-4 py-2.5 text-xs text-zinc-900 dark:text-zinc-200 placeholder:text-zinc-400 dark:placeholder:text-zinc-600 focus:outline-none focus:border-blue-500 dark:focus:border-blue-500 transition disabled:bg-slate-50 dark:disabled:bg-zinc-800/30 disabled:text-zinc-700 dark:disabled:text-zinc-300 disabled:border-zinc-200 dark:disabled:border-zinc-800 disabled:cursor-not-allowed shadow-xs"
                 />
               </div>
             </div>
@@ -533,147 +596,145 @@ export default function SettingsPage() {
 
       {/* TAB: NOTIFICATIONS */}
       {activeTab === "notifications" && (
-        <div className="bg-white dark:bg-[#111114] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-6 space-y-6 shadow-xs">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 flex items-center justify-center">
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
-              </svg>
+        <div className="space-y-6">
+          {/* 1. Notification Preferences */}
+          <div className="bg-white dark:bg-[#111114] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-6 space-y-6 shadow-xs">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 flex items-center justify-center">
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
+                </svg>
+              </div>
+              <div>
+                <h2 className="text-sm font-bold text-zinc-900 dark:text-white">Alert Preferences</h2>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400">Configure which events trigger real-time notifications</p>
+              </div>
             </div>
-            <div>
-              <h2 className="text-sm font-bold text-zinc-900 dark:text-white">Email & System Notifications</h2>
-              <p className="text-xs text-zinc-500 dark:text-zinc-400">Configure what events send direct alerts to your administrative team</p>
+
+            <div className="divide-y divide-zinc-100 dark:divide-zinc-800/60">
+              <div className="py-3.5 flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-semibold text-zinc-900 dark:text-white">New Lead Submissions</p>
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400">Receive alerts when new client leads are captured</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleTogglePref("notifyLeads", notifyLeads, setNotifyLeads)}
+                  className={`w-11 h-6 rounded-full transition-colors relative cursor-pointer ${notifyLeads ? "bg-blue-600" : "bg-zinc-300 dark:bg-zinc-700"}`}
+                >
+                  <div className={`w-4 h-4 rounded-full bg-white absolute top-1 transition-transform ${notifyLeads ? "left-6" : "left-1"}`} />
+                </button>
+              </div>
+
+              <div className="py-3.5 flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-semibold text-zinc-900 dark:text-white">Form Enquiries & Contact Cards</p>
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400">Alert on new Promise Me and general contact form enquiries</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleTogglePref("notifyForms", notifyForms, setNotifyForms)}
+                  className={`w-11 h-6 rounded-full transition-colors relative cursor-pointer ${notifyForms ? "bg-blue-600" : "bg-zinc-300 dark:bg-zinc-700"}`}
+                >
+                  <div className={`w-4 h-4 rounded-full bg-white absolute top-1 transition-transform ${notifyForms ? "left-6" : "left-1"}`} />
+                </button>
+              </div>
+
+              <div className="py-3.5 flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-semibold text-zinc-900 dark:text-white">Security & Auth Alerts</p>
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400">Notify on login activity, privilege changes, and security events</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleTogglePref("notifySecurity", notifySecurity, setNotifySecurity)}
+                  className={`w-11 h-6 rounded-full transition-colors relative cursor-pointer ${notifySecurity ? "bg-blue-600" : "bg-zinc-300 dark:bg-zinc-700"}`}
+                >
+                  <div className={`w-4 h-4 rounded-full bg-white absolute top-1 transition-transform ${notifySecurity ? "left-6" : "left-1"}`} />
+                </button>
+              </div>
+
+              <div className="py-3.5 flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-semibold text-zinc-900 dark:text-white">Finance & Payment Updates</p>
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400">Alert on completed, pending, or refunded payment transactions</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleTogglePref("weeklyDigest", weeklyDigest, setWeeklyDigest)}
+                  className={`w-11 h-6 rounded-full transition-colors relative cursor-pointer ${weeklyDigest ? "bg-blue-600" : "bg-zinc-300 dark:bg-zinc-700"}`}
+                >
+                  <div className={`w-4 h-4 rounded-full bg-white absolute top-1 transition-transform ${weeklyDigest ? "left-6" : "left-1"}`} />
+                </button>
+              </div>
             </div>
           </div>
 
-          <div className="divide-y divide-zinc-100 dark:divide-zinc-800/60">
-            <div className="py-3.5 flex items-center justify-between">
-              <div>
-                <p className="text-xs font-semibold text-zinc-900 dark:text-white">New Lead Submissions</p>
-                <p className="text-xs text-zinc-400">Receive instant alerts when a high-intent client submits the lead intake form</p>
-              </div>
-              <button
-                onClick={() => setNotifyLeads(!notifyLeads)}
-                className={`w-11 h-6 rounded-full transition-colors relative cursor-pointer ${notifyLeads ? "bg-blue-600" : "bg-zinc-300 dark:bg-zinc-700"}`}
-              >
-                <div className={`w-4 h-4 rounded-full bg-white absolute top-1 transition-transform ${notifyLeads ? "left-6" : "left-1"}`} />
-              </button>
-            </div>
-
-            <div className="py-3.5 flex items-center justify-between">
-              <div>
-                <p className="text-xs font-semibold text-zinc-900 dark:text-white">General Form Enquiries</p>
-                <p className="text-xs text-zinc-400">Notify when visitors fill out Promise Me contact cards</p>
-              </div>
-              <button
-                onClick={() => setNotifyForms(!notifyForms)}
-                className={`w-11 h-6 rounded-full transition-colors relative cursor-pointer ${notifyForms ? "bg-blue-600" : "bg-zinc-300 dark:bg-zinc-700"}`}
-              >
-                <div className={`w-4 h-4 rounded-full bg-white absolute top-1 transition-transform ${notifyForms ? "left-6" : "left-1"}`} />
-              </button>
-            </div>
-
-            <div className="py-3.5 flex items-center justify-between">
-              <div>
-                <p className="text-xs font-semibold text-zinc-900 dark:text-white">Security & Auth Alerts</p>
-                <p className="text-xs text-zinc-400">Notify immediately on repeated failed logins or privilege escalation</p>
-              </div>
-              <button
-                onClick={() => setNotifySecurity(!notifySecurity)}
-                className={`w-11 h-6 rounded-full transition-colors relative cursor-pointer ${notifySecurity ? "bg-blue-600" : "bg-zinc-300 dark:bg-zinc-700"}`}
-              >
-                <div className={`w-4 h-4 rounded-full bg-white absolute top-1 transition-transform ${notifySecurity ? "left-6" : "left-1"}`} />
-              </button>
-            </div>
-
-            <div className="py-3.5 flex items-center justify-between">
-              <div>
-                <p className="text-xs font-semibold text-zinc-900 dark:text-white">Weekly Executive Digest</p>
-                <p className="text-xs text-zinc-400">Summary report of financial transactions, instagram growth, and new leads</p>
-              </div>
-              <button
-                onClick={() => setWeeklyDigest(!weeklyDigest)}
-                className={`w-11 h-6 rounded-full transition-colors relative cursor-pointer ${weeklyDigest ? "bg-blue-600" : "bg-zinc-300 dark:bg-zinc-700"}`}
-              >
-                <div className={`w-4 h-4 rounded-full bg-white absolute top-1 transition-transform ${weeklyDigest ? "left-6" : "left-1"}`} />
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* TAB: INTEGRATIONS */}
-      {activeTab === "integrations" && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Google Drive BYO-Storage */}
+          {/* 2. Live Notification Inbox / Alert Log */}
           <div className="bg-white dark:bg-[#111114] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-6 space-y-4 shadow-xs">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 flex items-center justify-center font-bold">
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 6.375c0 2.278-3.694 4.125-8.25 4.125S3.75 8.653 3.75 6.375m16.5 0c0-2.278-3.694-4.125-8.25-4.125S3.75 4.097 3.75 6.375m16.5 0v11.25c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125V6.375m16.5 5.625c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125" />
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 flex items-center justify-center">
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
                   </svg>
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-zinc-900 dark:text-white">Google Drive BYO-Storage</h3>
-                  <p className="text-xs text-zinc-400">Encrypted configs &amp; JSON backups</p>
+                  <h2 className="text-sm font-bold text-zinc-900 dark:text-white">Recent Notification Feed</h2>
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400">Live alerts received across your workspace</p>
                 </div>
               </div>
-              <span className="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-                AES-256-GCM
-              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  setLoadingNotifications(true);
+                  fetch("/api/admin/notifications")
+                    .then((r) => r.json())
+                    .then((data) => setNotificationsList(data.notifications || []))
+                    .catch(() => {})
+                    .finally(() => setLoadingNotifications(false));
+                }}
+                className="text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer flex items-center gap-1"
+              >
+                Refresh Feed
+              </button>
             </div>
-            <p className="text-xs text-zinc-500 dark:text-zinc-400">
-              Stores encrypted backups directly inside the <code className="text-indigo-400 bg-indigo-950/40 px-1 py-0.5 rounded">MyManager_AppData</code> folder on your Google Drive.
-            </p>
-          </div>
 
-          {/* Google Sheets Live Sync */}
-          <div className="bg-white dark:bg-[#111114] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-6 space-y-4 shadow-xs">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 flex items-center justify-center font-bold">
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
-                  </svg>
-                </div>
-                <div>
-                  <h3 className="text-sm font-bold text-zinc-900 dark:text-white">Google Sheets Live Sync</h3>
-                  <p className="text-xs text-zinc-400">2-Way continuous pipeline synchronization</p>
-                </div>
+            {loadingNotifications && notificationsList.length === 0 ? (
+              <div className="py-12 flex items-center justify-center">
+                <div className="w-5 h-5 border-2 border-zinc-400 dark:border-zinc-600 border-t-blue-600 rounded-full animate-spin" />
               </div>
-              <span className="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-                Active
-              </span>
-            </div>
-            <p className="text-xs text-zinc-500 dark:text-zinc-400">
-              Synchronizes leads, status changes (New, Contacted, Converted) and rows with your connected spreadsheets.
-            </p>
-          </div>
-
-          {/* Instagram Graph API */}
-          <div className="bg-white dark:bg-[#111114] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-6 space-y-4 shadow-xs">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-500 via-rose-500 to-purple-600 flex items-center justify-center text-white font-bold shadow-md shadow-rose-500/20">
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <rect width="18" height="18" x="3" y="3" rx="5" />
-                    <circle cx="12" cy="12" r="4" />
-                    <circle cx="17.5" cy="6.5" r="1" fill="currentColor" />
-                  </svg>
-                </div>
-                <div>
-                  <h3 className="text-sm font-bold text-zinc-900 dark:text-white">Instagram Graph API</h3>
-                  <p className="text-xs text-zinc-400">Manage posts, media upload &amp; schedule</p>
-                </div>
+            ) : notificationsList.length === 0 ? (
+              <div className="py-10 text-center bg-slate-50 dark:bg-zinc-900/30 rounded-xl border border-zinc-200 dark:border-zinc-800">
+                <p className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">No recent notifications</p>
+                <p className="text-[11px] text-zinc-400 mt-0.5">New leads, enquiries, and transactions will appear here automatically.</p>
               </div>
-              <span className="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-                Connected
-              </span>
-            </div>
-            <p className="text-xs text-zinc-500 dark:text-zinc-400">
-              Allows publishing photos, reels, carousel posts and reading account telemetry.
-            </p>
+            ) : (
+              <div className="divide-y divide-zinc-100 dark:divide-zinc-800/60 rounded-xl border border-zinc-200 dark:border-zinc-800 overflow-hidden">
+                {notificationsList.map((item) => (
+                  <div key={item.id} className="p-4 bg-slate-50/50 dark:bg-zinc-900/20 hover:bg-slate-50 dark:hover:bg-zinc-900/40 transition flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-8 h-8 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 flex items-center justify-center shrink-0">
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
+                        </svg>
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-xs font-bold text-zinc-900 dark:text-white truncate">{item.title}</p>
+                        <p className="text-xs text-zinc-500 dark:text-zinc-400 truncate">{item.description}</p>
+                        <span className="text-[10px] text-zinc-400 mt-0.5 block">{new Date(item.timestamp).toLocaleString()}</span>
+                      </div>
+                    </div>
+                    <a
+                      href={item.href}
+                      className="px-3 py-1.5 text-xs font-semibold text-zinc-700 dark:text-zinc-200 bg-white dark:bg-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-700 border border-zinc-200 dark:border-zinc-700 rounded-lg transition shrink-0 cursor-pointer"
+                    >
+                      View
+                    </a>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}

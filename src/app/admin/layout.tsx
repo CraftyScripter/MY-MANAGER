@@ -5,7 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState, useCallback, useRef, Suspense } from "react";
 import { hasReadPermission } from "@/lib/permissions";
 import ThemeToggle from "@/components/ThemeToggle";
-import GoogleDriveIndicator from "@/components/GoogleDriveIndicator";
+import NotificationBell from "@/components/NotificationBell";
 
 interface UserInfo {
   id: string;
@@ -372,10 +372,15 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
             </Link>
           )}
 
+          {/* Desktop Notification Bell */}
+          <div className="hidden md:flex items-center shrink-0">
+            <NotificationBell />
+          </div>
+
           {/* Mobile Close Button */}
           <button
             onClick={() => setMobileMenuOpen(false)}
-            className="md:hidden p-1.5 text-zinc-400 hover:text-white rounded-lg hover:bg-zinc-800 transition cursor-pointer"
+            className="md:hidden p-1.5 text-zinc-400 hover:text-zinc-900 dark:hover:text-white rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition cursor-pointer"
             title="Close menu"
           >
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -415,23 +420,31 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
                         onClick={() => setMobileMenuOpen(false)}
                         className={`group flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-xs font-medium transition-all duration-150 relative ${
                           isActive
-                            ? "bg-zinc-800/90 text-white font-semibold shadow-xs border border-zinc-700/60"
-                            : "text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/40 border border-transparent"
+                            ? "bg-blue-50/90 text-blue-700 border border-blue-200/80 dark:bg-zinc-800/90 dark:text-white dark:border-zinc-700/60 font-semibold shadow-xs"
+                            : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800/50 border border-transparent"
                         }`}
                       >
                         {isActive && (
-                          <span className="absolute left-0 top-2 bottom-2 w-1 bg-blue-500 rounded-r-full" />
+                          <span className="absolute left-0 top-2 bottom-2 w-1 bg-blue-600 dark:bg-blue-500 rounded-r-full" />
                         )}
                         <span
                           className={`transition-colors duration-150 ${
                             isActive
-                              ? "text-blue-400"
-                              : "text-zinc-400 group-hover:text-white"
+                              ? "text-blue-600 dark:text-blue-400"
+                              : "text-zinc-500 dark:text-zinc-400 group-hover:text-zinc-900 dark:group-hover:text-zinc-100"
                           }`}
                         >
                           {item.icon}
                         </span>
-                        <span className="truncate">{item.label}</span>
+                        <span
+                          className={`truncate ${
+                            isActive
+                              ? "text-blue-700 dark:text-white font-semibold"
+                              : ""
+                          }`}
+                        >
+                          {item.label}
+                        </span>
                       </Link>
                     );
                   })}
@@ -441,9 +454,8 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
           )}
         </nav>
 
-        {/* Google Drive Status, Theme Mode Switcher & Logout */}
+        {/* Theme Mode Switcher & Logout */}
         <div className="p-3 pb-3 border-t border-zinc-200 dark:border-[#27272a] shrink-0 space-y-2">
-          <GoogleDriveIndicator />
           <ThemeToggle variant="segmented" />
           <button
             onClick={handleLogout}
@@ -488,6 +500,7 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <NotificationBell />
             {user?.image ? (
               <img
                 src={user.image}

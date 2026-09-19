@@ -18,6 +18,7 @@ import {
   CartesianGrid,
 } from "recharts";
 import type { Lead, LeadColumn } from "../../types";
+import DropdownSelect from "@/components/DropdownSelect";
 
 interface ChartsModalProps {
   isOpen: boolean;
@@ -392,17 +393,14 @@ export default function ChartsModal({
                     <label className="block text-[11px] font-medium text-zinc-600 dark:text-zinc-400 mb-1 uppercase tracking-wider">
                       Select Column
                     </label>
-                    <select
+                    <DropdownSelect
                       value={selectedColumn}
-                      onChange={(e) => setSelectedColumn(e.target.value)}
-                      className="bg-white dark:bg-[#18181b] border border-zinc-200 dark:border-zinc-700/80 rounded-xl px-3 py-1.5 text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-blue-500 cursor-pointer min-w-[180px]"
-                    >
-                      {allColumnKeys.map((key) => (
-                        <option key={key} value={key} className="bg-white dark:bg-[#18181b] text-zinc-900 dark:text-white">
-                          {key}
-                        </option>
-                      ))}
-                    </select>
+                      onChange={setSelectedColumn}
+                      options={allColumnKeys.map((key) => ({ label: key, value: key }))}
+                      size="sm"
+                      minWidth="180px"
+                      className="min-w-[180px]"
+                    />
                   </div>
 
                   <div>

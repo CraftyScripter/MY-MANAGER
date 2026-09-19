@@ -18,6 +18,11 @@ export interface CalendarEventItem {
   attendees?: { email: string; displayName?: string; responseStatus?: string }[];
   htmlLink?: string;
   status: string;
+  notes?: string;
+  clientPhone?: string;
+  clientName?: string;
+  clientEmail?: string;
+  bookedByRole?: string;
 }
 
 /**
@@ -452,36 +457,78 @@ export async function listAdminCalendarEvents({
     }
   }
 
-  // 2. Complement with DB Appointments that might not have synced yet
+  // 2. Fetch DB Appointments to enrich Google events with notes, phone, and client details
+  let dbAppts: any[] = [];
   try {
     if ((prisma as any).appointment?.findMany) {
-      const dbAppts = await (prisma as any).appointment.findMany({
+      dbAppts = await (prisma as any).appointment.findMany({
         where: {
           startTime: { gte: minDate, lte: maxDate },
         },
         orderBy: { startTime: "asc" },
       });
+    }
+  } catch (dbErr) {
+    console.warn("DB appointments lookup in listAdminCalendarEvents:", dbErr);
+  }
 
-      for (const appt of dbAppts) {
-        const exists = events.some((e) => e.id === appt.googleEventId);
-        if (!exists) {
-          events.push({
-            id: appt.id,
-            summary: appt.title,
-            description: appt.description || undefined,
-            start: appt.startTime.toISOString(),
-            end: appt.endTime.toISOString(),
-            meetLink: appt.meetLink || undefined,
-            attendees: [
-              { email: appt.clientEmail, displayName: appt.clientName },
-              ...(appt.bookedByEmail ? [{ email: appt.bookedByEmail }] : []),
-            ],
-            status: appt.status,
-          });
-        }
+  const apptMap = new Map<string, any>();
+  for (const appt of dbAppts) {
+    if (appt.googleEventId) apptMap.set(appt.googleEventId, appt);
+    if (appt.id) apptMap.set(appt.id, appt);
+  }
+
+  // Enrich fetched Google events
+  for (const event of events) {
+    const matched = apptMap.get(event.id);
+    let extractedNotes = matched?.notes;
+
+    // Fallback: parse notes from Google description if not found in DB
+    if (!extractedNotes && event.description) {
+      const notesMatch = event.description.match(/Notes:\s*([\s\S]*)$/i);
+      if (notesMatch && notesMatch[1] && notesMatch[1].trim() !== "None") {
+        extractedNotes = notesMatch[1].trim();
       }
     }
-  } catch (_) {}
+
+    if (matched) {
+      event.notes = extractedNotes || undefined;
+      event.clientPhone = matched.clientPhone || undefined;
+      event.clientName = matched.clientName || undefined;
+      event.clientEmail = matched.clientEmail || undefined;
+      event.bookedByRole = matched.bookedByRole || undefined;
+      if (!event.meetLink && matched.meetLink) {
+        event.meetLink = matched.meetLink;
+      }
+    } else if (extractedNotes) {
+      event.notes = extractedNotes;
+    }
+  }
+
+  // Add any DB Appointments that might not have synced to Google Calendar yet
+  for (const appt of dbAppts) {
+    const exists = events.some((e) => e.id === appt.googleEventId || e.id === appt.id);
+    if (!exists) {
+      events.push({
+        id: appt.id,
+        summary: appt.title,
+        description: appt.description || undefined,
+        start: appt.startTime instanceof Date ? appt.startTime.toISOString() : appt.startTime,
+        end: appt.endTime instanceof Date ? appt.endTime.toISOString() : appt.endTime,
+        meetLink: appt.meetLink || undefined,
+        attendees: [
+          { email: appt.clientEmail, displayName: appt.clientName },
+          ...(appt.bookedByEmail ? [{ email: appt.bookedByEmail }] : []),
+        ],
+        status: appt.status,
+        notes: appt.notes || undefined,
+        clientPhone: appt.clientPhone || undefined,
+        clientName: appt.clientName || undefined,
+        clientEmail: appt.clientEmail || undefined,
+        bookedByRole: appt.bookedByRole || undefined,
+      });
+    }
+  }
 
   // Sort chronologically
   return events.sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime());

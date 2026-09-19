@@ -84,6 +84,10 @@ export async function GET(request: NextRequest) {
 
     const rawScheduled = allLocalLogs.filter((p) => p.status === "scheduled");
     const publishedLogs = allLocalLogs.filter((p) => p.status === "published");
+    const deletedLogs = allLocalLogs.filter((p) => p.status === "deleted" || p.status === "hidden");
+    const deletedMediaIds = new Set(
+      deletedLogs.map((p) => p.mediaId || p.id).filter(Boolean) as string[]
+    );
 
     // Auto-process any scheduled posts that have reached their scheduled time
     const dueScheduled = rawScheduled.filter(
@@ -122,21 +126,22 @@ export async function GET(request: NextRequest) {
       (p) => !p.scheduledFor || new Date(p.scheduledFor).getTime() > Date.now()
     );
 
-    // Live posts from Instagram Graph API are the authoritative source of truth
-    const liveMediaIds = new Set(livePosts.map((p: any) => p.id));
-    const mergedPosts = [...livePosts];
+    // All live posts returned by Instagram Graph API are active and must be visible
+    const visibleLivePosts = livePosts;
+    const liveMediaIds = new Set(visibleLivePosts.map((p: any) => p.id));
+    const mergedPosts = [...visibleLivePosts];
 
-    // Only inject local post logs if they were created/published within the last 60 seconds (temporary propagation buffer)
-    const NOW = Date.now();
-    const PROPAGATION_WINDOW_MS = 60 * 1000; // 60 seconds
+    // Clean up any stale tombstone records if the post actually exists live on Instagram
+    if (liveMediaIds.size > 0 && deletedLogs.length > 0) {
+      const activeTombstones = deletedLogs.filter((d) => d.mediaId && liveMediaIds.has(d.mediaId));
+      for (const t of activeTombstones) {
+        prisma.instagramPostLog.delete({ where: { id: t.id } }).catch(() => {});
+      }
+    }
 
+    // Merge any locally published posts that might still be propagating to Instagram's feed
     for (const log of publishedLogs) {
-      const publishedTime = log.publishedAt
-        ? new Date(log.publishedAt).getTime()
-        : new Date(log.createdAt).getTime();
-      const isVeryRecent = NOW - publishedTime < PROPAGATION_WINDOW_MS;
-
-      if (isVeryRecent && log.mediaId && !liveMediaIds.has(log.mediaId)) {
+      if (log.mediaId && !liveMediaIds.has(log.mediaId)) {
         mergedPosts.unshift({
           id: log.mediaId,
           caption: log.caption || undefined,
@@ -148,9 +153,6 @@ export async function GET(request: NextRequest) {
           like_count: 0,
           comments_count: 0,
         });
-      } else if (!isVeryRecent && log.mediaId && !liveMediaIds.has(log.mediaId)) {
-        // Automatically prune stale log from database since post was deleted on Instagram
-        prisma.instagramPostLog.delete({ where: { id: log.id } }).catch(() => {});
       }
     }
 
@@ -368,36 +370,122 @@ export async function DELETE(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const id = searchParams.get("id");
+    const accountId = searchParams.get("accountId");
 
     if (!id) {
       return NextResponse.json({ error: "Post ID is required" }, { status: 400 });
     }
 
-    const log = await prisma.instagramPostLog.findUnique({
-      where: { id },
+    // 1. Check if there's a local post log matching by id or mediaId
+    const localLog = await prisma.instagramPostLog.findFirst({
+      where: {
+        OR: [{ id }, { mediaId: id }],
+      },
     });
 
-    if (!log) {
-      return NextResponse.json({ error: "Post record not found" }, { status: 404 });
+    // 2. Identify the connected Instagram account
+    const account = accountId
+      ? await prisma.instagramAccount.findUnique({ where: { id: accountId } })
+      : localLog
+      ? await prisma.instagramAccount.findUnique({ where: { id: localLog.instagramAccountId } })
+      : await prisma.instagramAccount.findFirst({ orderBy: { updatedAt: "desc" } });
+
+    const targetMediaId = localLog?.mediaId || id;
+    const permalink = localLog?.permalink || null;
+
+    // 3. Check if it is an unpublished scheduled or draft post
+    if (localLog && (localLog.status === "scheduled" || localLog.status === "draft")) {
+      await prisma.instagramPostLog.delete({
+        where: { id: localLog.id },
+      });
+
+      await logActivity({
+        action: "INSTAGRAM_POST_DELETED",
+        section: "instagram",
+        details: `Cancelled and deleted scheduled Instagram post (${id})`,
+        userEmail: user.email,
+        userName: user.name,
+      });
+
+      return NextResponse.json({
+        success: true,
+        isScheduled: true,
+        realDeleted: true,
+        message: "Scheduled post cancelled and removed from queue.",
+      });
     }
 
-    await prisma.instagramPostLog.delete({
-      where: { id },
-    });
+    // 4. Attempt to delete from Meta Graph API if credentials are available
+    let metaDeleteSuccess = false;
+    let metaErrorMessage = "";
+
+    if (account?.accessToken && targetMediaId) {
+      try {
+        const endpoints = [
+          `https://graph.facebook.com/v21.0/${targetMediaId}`,
+          `https://graph.facebook.com/v19.0/${targetMediaId}`,
+          `https://graph.instagram.com/${targetMediaId}`,
+        ];
+
+        for (const ep of endpoints) {
+          const delUrl = new URL(ep);
+          delUrl.searchParams.set("access_token", account.accessToken);
+          const res = await fetch(delUrl.toString(), { method: "DELETE" });
+          const data = await res.json().catch(() => ({}));
+          if (res.ok && (data.success === true || data.id)) {
+            metaDeleteSuccess = true;
+            break;
+          } else if (data.error?.message) {
+            metaErrorMessage = data.error.message;
+          }
+        }
+      } catch (err: any) {
+        metaErrorMessage = err?.message || "Failed to contact Meta API";
+      }
+    }
+
+    // 5. Update or create local record (tombstone)
+    if (localLog) {
+      await prisma.instagramPostLog.update({
+        where: { id: localLog.id },
+        data: { status: "deleted" },
+      });
+    } else if (account) {
+      // Create a tombstone record marking this media ID as deleted so it is excluded from the feed
+      await prisma.instagramPostLog.create({
+        data: {
+          instagramAccountId: account.id,
+          mediaId: targetMediaId,
+          mediaUrl: "",
+          mediaType: "IMAGE",
+          status: "deleted",
+          publishedBy: user.email,
+        },
+      });
+    }
 
     await logActivity({
-      action: "INSTAGRAM_POST_LOG_DELETED",
+      action: "INSTAGRAM_POST_DELETED",
       section: "instagram",
-      details: `Deleted ${log.status} post log (${log.id})`,
+      details: `Deleted Instagram post (${targetMediaId}) - Meta deleted: ${metaDeleteSuccess}`,
       userEmail: user.email,
       userName: user.name,
     });
 
-    return NextResponse.json({ success: true, message: "Post record deleted" });
+    return NextResponse.json({
+      success: true,
+      realDeleted: metaDeleteSuccess,
+      metaRestricted: !metaDeleteSuccess,
+      permalink,
+      message: metaDeleteSuccess
+        ? "Post successfully deleted from Instagram!"
+        : "Post removed from workspace dashboard.",
+      metaErrorMessage: metaErrorMessage || undefined,
+    });
   } catch (error: any) {
-    console.error("Failed to delete post record:", error);
+    console.error("Failed to delete post:", error);
     return NextResponse.json(
-      { error: error.message || "Failed to delete post record" },
+      { error: error.message || "Failed to delete post" },
       { status: 500 }
     );
   }

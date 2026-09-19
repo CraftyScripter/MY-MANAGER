@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentUser, checkPermission } from "@/lib/auth";
 import { logActivity } from "@/lib/activity";
 import { broadcastGlobal } from "@/lib/sync-events";
+import { getWorkspaceAdminGoogleAccount } from "@/lib/google";
+import { createGoogleSpreadsheet, ensureSheetHeaders } from "@/lib/google-sheets";
 
 export async function GET(request: Request) {
   const user = await getCurrentUser();
@@ -48,7 +50,7 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json();
-    const { name, description, folderId } = body;
+    const { name, description, folderId, syncWithGoogleSheet } = body;
 
     if (!name || !name.trim()) {
       return NextResponse.json({ error: "File name is required" }, { status: 400 });
@@ -61,10 +63,13 @@ export async function POST(request: Request) {
       }
     }
 
-    const file = await prisma.leadFile.create({
+    let initialDescription = description || null;
+    let googleSheetUrl: string | null = null;
+
+    let file = await prisma.leadFile.create({
       data: {
         name: name.trim(),
-        description: description || null,
+        description: initialDescription,
         folderId: folderId || null,
       },
     });
@@ -78,19 +83,60 @@ export async function POST(request: Request) {
       },
     });
 
+    // If syncWithGoogleSheet is enabled, create spreadsheet on Google Drive and link it
+    if (syncWithGoogleSheet) {
+      try {
+        const account = await getWorkspaceAdminGoogleAccount(user.id);
+        if (account && account.accessToken) {
+          const newSheet = await createGoogleSpreadsheet(
+            account.accessToken,
+            name.trim(),
+            "Sheet 1"
+          );
+          googleSheetUrl = newSheet.spreadsheetUrl;
+
+          await ensureSheetHeaders(account.accessToken, newSheet.spreadsheetId, "Sheet 1").catch(() => {});
+
+          await prisma.googleSheetLink.create({
+            data: {
+              userId: user.id || "admin",
+              fileId: file.id,
+              tabId: tab.id,
+              spreadsheetId: newSheet.spreadsheetId,
+              spreadsheetName: name.trim(),
+              sheetName: "Sheet 1",
+              sheetUrl: newSheet.spreadsheetUrl,
+              syncStatus: "success",
+              lastSyncedAt: new Date(),
+            },
+          });
+
+          const updatedDesc = description
+            ? `${description} • Google Sheet (Live Sync)`
+            : `Google Sheet (Live Sync) • 1 tab`;
+
+          file = await prisma.leadFile.update({
+            where: { id: file.id },
+            data: { description: updatedDesc },
+          });
+        }
+      } catch (sheetErr) {
+        console.warn("Could not automatically create Google Sheet on Google Drive:", sheetErr);
+      }
+    }
+
     await logActivity({
       action: "create_file",
       section: "leads",
       user,
-      details: { fileId: file.id, name: file.name, folderId: file.folderId },
+      details: { fileId: file.id, name: file.name, folderId: file.folderId, googleSheetUrl },
       req: request,
     });
 
     broadcastGlobal("file_created", { fileId: file.id, folderId: file.folderId });
 
-    return NextResponse.json({ file, tab }, { status: 201 });
+    return NextResponse.json({ file, tab, googleSheetUrl }, { status: 201 });
   } catch (error) {
-
     console.error("Create file error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }

@@ -5,6 +5,9 @@ import {
 } from "@/lib/googleCalendarService";
 import { getCurrentUser } from "@/lib/auth";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export async function GET(request: Request) {
   const user = await getCurrentUser();
   if (!user) {
@@ -22,10 +25,19 @@ export async function GET(request: Request) {
       preferredUserId: user.id,
     });
 
-    return NextResponse.json({
-      success: true,
-      events,
-    });
+    return NextResponse.json(
+      {
+        success: true,
+        events,
+      },
+      {
+        headers: {
+          "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+          Pragma: "no-cache",
+          Expires: "0",
+        },
+      }
+    );
   } catch (error: any) {
     console.error("Calendar events list error:", error);
     return NextResponse.json(

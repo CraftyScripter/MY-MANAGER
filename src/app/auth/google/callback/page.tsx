@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, Suspense } from "react";
+import { useEffect, useState, useRef, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 function GoogleCallbackContent() {
@@ -8,6 +8,7 @@ function GoogleCallbackContent() {
   const router = useRouter();
   const [status, setStatus] = useState<"loading" | "success" | "error">("loading");
   const [errorMessage, setErrorMessage] = useState<string>("");
+  const processedCodeRef = useRef<string | null>(null);
 
   useEffect(() => {
     const code = searchParams.get("code");
@@ -25,6 +26,12 @@ function GoogleCallbackContent() {
       setErrorMessage("No authorization code found in Google response.");
       return;
     }
+
+    // Prevent duplicate executions (React StrictMode mounts effects twice in dev)
+    if (processedCodeRef.current === code) {
+      return;
+    }
+    processedCodeRef.current = code;
 
     async function processAuth() {
       try {

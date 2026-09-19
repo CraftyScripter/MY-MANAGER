@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { getAdminCalendarAvailability } from "@/lib/googleCalendarService";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
@@ -22,7 +25,13 @@ export async function GET(request: Request) {
       slotDurationMinutes: isNaN(slotDurationMinutes) || slotDurationMinutes <= 0 ? 30 : slotDurationMinutes,
     });
 
-    return NextResponse.json(result);
+    return NextResponse.json(result, {
+      headers: {
+        "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+        Pragma: "no-cache",
+        Expires: "0",
+      },
+    });
   } catch (error: any) {
     console.error("Availability API error:", error);
     return NextResponse.json(
