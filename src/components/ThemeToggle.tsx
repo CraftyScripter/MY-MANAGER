@@ -49,7 +49,7 @@ export default React.memo(function ThemeToggle({
     ];
 
     return (
-      <div className={`grid grid-cols-3 w-full p-1 bg-zinc-100 dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800 rounded-xl ${className}`}>
+      <div className={`flex items-center p-0.5 bg-zinc-100 dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800 rounded-lg ${className}`}>
         {options.map((opt) => {
           const isSelected = theme === opt.id;
           return (
@@ -57,14 +57,14 @@ export default React.memo(function ThemeToggle({
               key={opt.id}
               type="button"
               onClick={() => setTheme(opt.id)}
-              className={`w-full min-w-0 flex items-center justify-center gap-1.5 py-1.5 px-1 rounded-lg text-xs transition-all duration-150 cursor-pointer select-none ${
+              className={`flex-1 flex items-center justify-center gap-1 py-1 px-1.5 rounded-md text-[11px] transition-all duration-150 cursor-pointer select-none ${
                 isSelected
-                  ? "bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 font-semibold shadow-xs border border-zinc-200/80 dark:border-zinc-700/60"
-                  : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 hover:bg-zinc-200/50 dark:hover:bg-zinc-800/40 border border-transparent font-medium"
+                  ? "bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 font-semibold shadow-xs"
+                  : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300"
               }`}
             >
               <span className="shrink-0">{opt.icon}</span>
-              <span className="truncate text-[11px] sm:text-xs leading-none">{opt.label}</span>
+              <span className="truncate leading-none">{opt.label}</span>
             </button>
           );
         })}

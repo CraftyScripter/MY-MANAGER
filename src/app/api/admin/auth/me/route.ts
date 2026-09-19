@@ -21,12 +21,16 @@ export async function GET() {
     // Fetch linked Google profile picture and display name if available
     let image: string | null = null;
     let googleName: string | null = null;
-    try {
-      const googleAccount = await getWorkspaceAdminGoogleAccount(user.id);
-      image = googleAccount?.picture || null;
-      googleName = googleAccount?.name || null;
-    } catch {
-      // Non-blocking – image stays null
+
+    // Only fetch Google image for admin — team members show first-letter avatar
+    if (user.role === "admin") {
+      try {
+        const googleAccount = await getWorkspaceAdminGoogleAccount(user.id);
+        image = googleAccount?.picture || null;
+        googleName = googleAccount?.name || null;
+      } catch {
+        // Non-blocking – image stays null
+      }
     }
 
     const displayName = (user.id === "admin" && googleName) ? googleName : user.name;

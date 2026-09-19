@@ -193,6 +193,10 @@ export async function POST(request: Request) {
       req: request,
     });
 
+    // Auto-backup after payment created
+    const { on_data_created } = await import("@/lib/autoBackup");
+    on_data_created("payment");
+
     console.log(`Payment created: ${payment.id} (${transactionId})`);
 
     recomputeDashboardStats().catch(console.error);

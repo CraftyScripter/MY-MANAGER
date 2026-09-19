@@ -345,6 +345,10 @@ export async function POST(request: NextRequest) {
       userName: user.name,
     });
 
+    // Auto-backup after Instagram post
+    const { on_data_created } = await import("@/lib/autoBackup");
+    on_data_created("instagramPost");
+
     return NextResponse.json({
       success: true,
       message: "Post successfully published to Instagram!",

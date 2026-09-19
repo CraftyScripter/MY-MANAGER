@@ -161,6 +161,16 @@ const navGroups: NavGroup[] = [
         ),
       },
       {
+        label: "Backup & Restore",
+        href: "/admin/backup",
+        permission: "settings",
+        icon: (
+          <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 6.375c0 2.278-3.694 4.125-8.25 4.125S3.75 8.653 3.75 6.375m16.5 0c0-2.278-3.694-4.125-8.25-4.125S3.75 4.097 3.75 6.375m16.5 0v11.25c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125V6.375m16.5 0v3.75m-16.5-3.75v3.75m16.5 0v3.75C20.25 16.153 16.556 18 12 18s-8.25-1.847-8.25-4.125v-3.75m16.5 0c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125" />
+          </svg>
+        ),
+      },
+      {
         label: "Settings",
         href: "/admin/settings",
         permission: "settings",
@@ -356,26 +366,17 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
           ) : (
             <Link
               href="/admin/settings"
-              className="flex items-center gap-2.5 group p-1 -m-1 rounded-xl hover:bg-zinc-100 dark:hover:bg-[#18181b] transition flex-1"
+              className="flex items-center gap-2 group p-1 -m-1 rounded-xl hover:bg-zinc-100 dark:hover:bg-[#18181b] transition min-w-0 max-w-[calc(100%-3rem)]"
               title="View Profile"
             >
-              {user?.image ? (
-                <img
-                  src={user.image}
-                  alt={userDisplayName}
-                  className="w-8 h-8 rounded-full object-cover border border-indigo-500/40 shrink-0"
-                  referrerPolicy="no-referrer"
-                />
-              ) : (
-                <div className="w-8 h-8 rounded-full bg-indigo-600 border border-indigo-700 flex items-center justify-center text-xs font-bold text-white shrink-0">
-                  {userInitial}
-                </div>
-              )}
+              <div className="w-8 h-8 rounded-full bg-indigo-600 border border-indigo-700 flex items-center justify-center text-xs font-bold text-white shrink-0">
+                {userInitial}
+              </div>
               <div className="min-w-0 flex-1">
-                <p className="text-xs font-bold text-zinc-900 dark:text-white tracking-tight leading-tight truncate group-hover:text-indigo-600 dark:group-hover:text-indigo-300 transition">
+                <p className="text-xs font-bold text-zinc-900 dark:text-white tracking-tight leading-tight truncate">
                   {userDisplayName}
                 </p>
-                <p className="text-[10px] text-zinc-500 dark:text-zinc-400 leading-tight truncate mt-0.5">
+                <p className="text-[10px] text-zinc-500 dark:text-zinc-400 leading-tight truncate">
                   {user?.email}
                 </p>
               </div>

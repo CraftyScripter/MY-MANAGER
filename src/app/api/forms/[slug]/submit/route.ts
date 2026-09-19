@@ -128,6 +128,10 @@ export async function POST(
       },
     });
 
+    // Auto-backup after FormBridge submission
+    const { on_data_created } = await import("@/lib/autoBackup");
+    on_data_created("formSubmission");
+
     return NextResponse.json(
       {
         success: true,

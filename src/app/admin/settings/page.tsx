@@ -328,12 +328,14 @@ export default function SettingsPage() {
                 </svg>
               </div>
               <div>
-                <h2 className="text-sm font-bold text-zinc-900 dark:text-white">Appearance & Theme</h2>
-                <p className="text-xs text-zinc-500 dark:text-zinc-400">Choose how My Manager looks across your device screens</p>
+                <h2 className="text-sm font-bold text-zinc-900 dark:text-white">Appearance</h2>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400">Choose your preferred theme</p>
               </div>
             </div>
 
-            <ThemeToggle variant="card" />
+            <div className="max-w-xs">
+              <ThemeToggle variant="segmented" />
+            </div>
           </div>
 
           {/* Workspace Preferences */}
@@ -346,26 +348,34 @@ export default function SettingsPage() {
               </div>
               <div>
                 <h2 className="text-sm font-bold text-zinc-900 dark:text-white">Workspace Information</h2>
-                <p className="text-xs text-zinc-500 dark:text-zinc-400">Global system configuration and platform metadata</p>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400">Your account and workspace details</p>
               </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
               <div className="p-4 rounded-xl bg-slate-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800">
-                <span className="text-xs text-zinc-500 dark:text-zinc-400">Application Name</span>
-                <p className="text-sm font-semibold text-zinc-800 dark:text-zinc-200 mt-0.5">My Manager</p>
+                <span className="text-xs text-zinc-500 dark:text-zinc-400">Account Type</span>
+                <p className="text-sm font-semibold text-zinc-800 dark:text-zinc-200 mt-0.5">
+                  {isAdmin ? "Administrator" : "Team Member"}
+                </p>
               </div>
               <div className="p-4 rounded-xl bg-slate-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800">
-                <span className="text-xs text-zinc-500 dark:text-zinc-400">Primary Timezone</span>
-                <p className="text-sm font-semibold text-zinc-800 dark:text-zinc-200 mt-0.5">Asia/Kolkata (IST - UTC+05:30)</p>
+                <span className="text-xs text-zinc-500 dark:text-zinc-400">Email</span>
+                <p className="text-sm font-semibold text-zinc-800 dark:text-zinc-200 mt-0.5 font-mono">{user?.email}</p>
               </div>
+              {!isAdmin && assignedSections.length > 0 && (
+                <div className="p-4 rounded-xl bg-slate-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800">
+                  <span className="text-xs text-zinc-500 dark:text-zinc-400">Assigned Sections</span>
+                  <p className="text-sm font-semibold text-zinc-800 dark:text-zinc-200 mt-0.5">
+                    {assignedSections.map((s) => s.label).join(", ")}
+                  </p>
+                </div>
+              )}
               <div className="p-4 rounded-xl bg-slate-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800">
-                <span className="text-xs text-zinc-500 dark:text-zinc-400">Default Currency</span>
-                <p className="text-sm font-semibold text-zinc-800 dark:text-zinc-200 mt-0.5">INR (₹) / USD ($)</p>
-              </div>
-              <div className="p-4 rounded-xl bg-slate-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800">
-                <span className="text-xs text-zinc-500 dark:text-zinc-400">Workspace Language</span>
-                <p className="text-sm font-semibold text-zinc-800 dark:text-zinc-200 mt-0.5">English (US)</p>
+                <span className="text-xs text-zinc-500 dark:text-zinc-400">Timezone</span>
+                <p className="text-sm font-semibold text-zinc-800 dark:text-zinc-200 mt-0.5">
+                  {Intl.DateTimeFormat().resolvedOptions().timeZone}
+                </p>
               </div>
             </div>
           </div>

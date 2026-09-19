@@ -1,15 +1,27 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
+import { hasReadPermission } from "@/lib/permissions";
 
 export interface SystemNotification {
   id: string;
   title: string;
   description: string;
   timestamp: string;
-  type: "form" | "lead" | "finance" | "security";
+  type: "form" | "finance" | "instagram" | "formbridge" | "backup" | "team" | "booking";
   href: string;
 }
+
+// Map notification type to required permission
+const TYPE_TO_PERMISSION: Record<string, string> = {
+  form: "forms",
+  formbridge: "forms",
+  finance: "finance",
+  instagram: "instagram",
+  booking: "calendar",
+  team: "team",
+  backup: "settings",
+};
 
 export async function GET() {
   const user = await getCurrentUser();
@@ -18,8 +30,22 @@ export async function GET() {
   }
 
   try {
-    const [promiseForms, contactForms, leads, payments, logs] = await Promise.all([
+    const now = new Date();
+    const last7days = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+    const [
+      promiseForms,
+      contactForms,
+      payments,
+      instagramPosts,
+      formSubmissions,
+      googleAccount,
+      appointments,
+      teamMembers,
+    ] = await Promise.all([
+      // Promise Me enquiries (last 7 days)
       prisma.promiseMeEnquiry.findMany({
+        where: { createdAt: { gte: last7days } },
         orderBy: { createdAt: "desc" },
         take: 5,
         select: {
@@ -27,11 +53,13 @@ export async function GET() {
           name: true,
           email: true,
           company: true,
-          projectDetailsOrRequirement: true,
           createdAt: true,
         },
       }).catch(() => []),
+
+      // Contact enquiries (last 7 days)
       prisma.contactEnquiry.findMany({
+        where: { createdAt: { gte: last7days } },
         orderBy: { createdAt: "desc" },
         take: 5,
         select: {
@@ -42,18 +70,10 @@ export async function GET() {
           createdAt: true,
         },
       }).catch(() => []),
-      prisma.lead.findMany({
-        orderBy: { createdAt: "desc" },
-        take: 5,
-        select: {
-          id: true,
-          businessName: true,
-          email: true,
-          category: true,
-          createdAt: true,
-        },
-      }).catch(() => []),
+
+      // Payments (last 7 days)
       prisma.payment.findMany({
+        where: { createdAt: { gte: last7days } },
         orderBy: { createdAt: "desc" },
         take: 5,
         select: {
@@ -68,16 +88,65 @@ export async function GET() {
           createdAt: true,
         },
       }).catch(() => []),
-      prisma.activityLog.findMany({
+
+      // Instagram posts (last 7 days)
+      prisma.instagramPostLog.findMany({
+        where: { createdAt: { gte: last7days } },
         orderBy: { createdAt: "desc" },
         take: 5,
         select: {
           id: true,
-          action: true,
-          userName: true,
-          userEmail: true,
-          section: true,
-          details: true,
+          caption: true,
+          mediaType: true,
+          status: true,
+          createdAt: true,
+        },
+      }).catch(() => []),
+
+      // FormBridge submissions (last 7 days)
+      prisma.formSubmission.findMany({
+        where: { createdAt: { gte: last7days } },
+        orderBy: { createdAt: "desc" },
+        take: 5,
+        select: {
+          id: true,
+          projectId: true,
+          createdAt: true,
+        },
+      }).catch(() => []),
+
+      // Google Drive backup status
+      prisma.googleAccount.findFirst({
+        select: {
+          lastBackupAt: true,
+          email: true,
+        },
+      }).catch(() => null),
+
+      // Appointments (last 7 days)
+      prisma.appointment.findMany({
+        where: { createdAt: { gte: last7days } },
+        orderBy: { createdAt: "desc" },
+        take: 5,
+        select: {
+          id: true,
+          title: true,
+          clientName: true,
+          status: true,
+          createdAt: true,
+        },
+      }).catch(() => []),
+
+      // New team members (last 7 days)
+      prisma.user.findMany({
+        where: { createdAt: { gte: last7days } },
+        orderBy: { createdAt: "desc" },
+        take: 3,
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          role: true,
           createdAt: true,
         },
       }).catch(() => []),
@@ -85,63 +154,114 @@ export async function GET() {
 
     const notifications: SystemNotification[] = [];
 
-    // Format Promise Me enquiries
+    // Form Submissions
     for (const f of promiseForms) {
       notifications.push({
         id: `form-pm-${f.id}`,
-        title: "New Form Submission",
-        description: `${f.name}${f.company ? ` (${f.company})` : ""} submitted enquiry on Promise Me`,
+        title: "New Enquiry Received",
+        description: `${f.name}${f.company ? ` from ${f.company}` : ""} submitted a form`,
         timestamp: f.createdAt.toISOString(),
         type: "form",
         href: "/admin/promise-me",
       });
     }
 
-    // Format General Contact enquiries
     for (const c of contactForms) {
       notifications.push({
         id: `form-contact-${c.id}`,
         title: "New Contact Message",
-        description: `${c.name}: ${c.message?.slice(0, 50) || "New enquiry received"}`,
+        description: `${c.name}: "${(c.message || "").slice(0, 60)}${(c.message || "").length > 60 ? "..." : ""}"`,
         timestamp: c.createdAt.toISOString(),
         type: "form",
         href: "/admin/promise-me",
       });
     }
 
-    // Format Leads
-    for (const l of leads) {
+    // FormBridge Submissions
+    for (const s of formSubmissions) {
       notifications.push({
-        id: `lead-${l.id}`,
-        title: "New Lead Added",
-        description: `${l.businessName}${l.category ? ` (${l.category})` : ""}`,
-        timestamp: l.createdAt.toISOString(),
-        type: "lead",
-        href: "/admin/leads",
+        id: `fb-${s.id}`,
+        title: "FormBridge Submission",
+        description: `New form submission received on project`,
+        timestamp: s.createdAt.toISOString(),
+        type: "formbridge",
+        href: `/admin/forms`,
       });
     }
 
-    // Format Payments
+    // Payments
     for (const p of payments) {
+      const emoji = p.type === "Income" ? "💰" : p.type === "Expense" ? "💸" : "↩️";
       notifications.push({
         id: `payment-${p.id}`,
-        title: `Payment ${p.status.toUpperCase()}`,
-        description: `${p.type.toUpperCase()}: ${p.currency} ${p.amount} ${p.paidBy ? `by ${p.paidBy}` : ""}`,
+        title: `${emoji} Payment ${p.status}`,
+        description: `${p.type}: ${p.currency} ${p.amount}${p.paidBy ? ` — ${p.paidBy}` : ""}${p.paidTo ? ` → ${p.paidTo}` : ""}`,
         timestamp: p.createdAt.toISOString(),
         type: "finance",
         href: "/admin/payments",
       });
     }
 
-    // Format Activity logs
-    for (const log of logs) {
+    // Instagram Activity
+    for (const post of instagramPosts) {
+      const caption = (post.caption || "Instagram post").slice(0, 60);
       notifications.push({
-        id: `log-${log.id}`,
-        title: `Activity: ${log.action}`,
-        description: `${log.userName || log.userEmail} in ${log.section}${log.details ? ` (${log.details})` : ""}`,
-        timestamp: log.createdAt.toISOString(),
-        type: "security",
-        href: "/admin/activity-log",
+        id: `ig-${post.id}`,
+        title: `Instagram ${post.status}`,
+        description: `${caption}${(post.caption || "").length > 60 ? "..." : ""} (${post.mediaType})`,
+        timestamp: post.createdAt.toISOString(),
+        type: "instagram",
+        href: "/admin/instagram",
+      });
+    }
+
+    // Bookings
+    for (const apt of appointments) {
+      notifications.push({
+        id: `apt-${apt.id}`,
+        title: `Meeting ${apt.status}`,
+        description: `${apt.title} with ${apt.clientName}`,
+        timestamp: apt.createdAt.toISOString(),
+        type: "booking",
+        href: "/admin/calendar",
+      });
+    }
+
+    // Team Members
+    for (const m of teamMembers) {
+      notifications.push({
+        id: `team-${m.id}`,
+        title: "New Team Member",
+        description: `${m.name} (${m.email}) joined as ${m.role}`,
+        timestamp: m.createdAt.toISOString(),
+        type: "team",
+        href: "/admin/team",
+      });
+    }
+
+    // Backup reminder (if no backup in last 3 days)
+    if (googleAccount?.lastBackupAt) {
+      const daysSinceBackup = Math.floor(
+        (now.getTime() - new Date(googleAccount.lastBackupAt).getTime()) / (1000 * 60 * 60 * 24)
+      );
+      if (daysSinceBackup >= 3) {
+        notifications.push({
+          id: "backup-reminder",
+          title: "Backup Reminder",
+          description: `Last backup was ${daysSinceBackup} days ago. Consider running a backup.`,
+          timestamp: googleAccount.lastBackupAt.toISOString(),
+          type: "backup",
+          href: "/admin/settings",
+        });
+      }
+    } else if (googleAccount) {
+      notifications.push({
+        id: "backup-none",
+        title: "No Backup Found",
+        description: "You haven't run a backup yet. Connect Google Drive and create your first backup.",
+        timestamp: now.toISOString(),
+        type: "backup",
+        href: "/admin/settings",
       });
     }
 
@@ -150,7 +270,16 @@ export async function GET() {
       (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
     );
 
-    return NextResponse.json({ notifications: notifications.slice(0, 15) });
+    // Filter notifications based on user permissions (team members only see permitted sections)
+    const filtered = user.role === "admin"
+      ? notifications
+      : notifications.filter((n) => {
+          const requiredPerm = TYPE_TO_PERMISSION[n.type];
+          if (!requiredPerm) return true; // show if no permission mapping
+          return hasReadPermission(user.permissions, requiredPerm);
+        });
+
+    return NextResponse.json({ notifications: filtered.slice(0, 20) });
   } catch (error) {
     console.error("Notifications error:", error);
     return NextResponse.json({ notifications: [] });

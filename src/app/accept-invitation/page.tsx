@@ -196,7 +196,7 @@ function AcceptInvitationForm() {
 
       setSuccess(true);
       showToast("success", "Account activated successfully! Redirecting to login...", 4000);
-      setTimeout(() => router.push("/"), 3000);
+      setTimeout(() => router.push("/login"), 3000);
     } catch (err: any) {
       if (slowTimerRef.current) clearTimeout(slowTimerRef.current);
       clearTimeout(timeoutId);
@@ -354,7 +354,7 @@ function AcceptInvitationForm() {
             Account Activated!
           </h1>
           <p className="text-zinc-500 dark:text-zinc-400 text-xs leading-relaxed">
-            Your password has been configured. Redirecting you to the admin login portal...
+            Your password has been configured. Redirecting you to the login page...
           </p>
           <div className="flex items-center justify-center gap-2 pt-2 text-blue-600 dark:text-blue-400 text-xs font-medium">
             <div className="w-4 h-4 border-2 border-blue-600 dark:border-blue-400 border-t-transparent rounded-full animate-spin" />
