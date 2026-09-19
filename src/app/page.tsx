@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import ThemeToggle from "@/components/ThemeToggle";
+import Footer from "@/components/Footer";
 
 export default function SaaSMarketingLandingPage() {
   const [activeTab, setActiveTab] = useState<"dashboard" | "leads" | "calendar" | "forms" | "finance" | "drive" | "vault">("leads");
@@ -1066,7 +1067,7 @@ export default function SaaSMarketingLandingPage() {
               <div className="space-y-4">
                 <h3 className="text-lg font-bold text-zinc-900 dark:text-white">Starter</h3>
                 <div className="text-3xl sm:text-4xl font-extrabold text-zinc-900 dark:text-white">
-                  $0 <span className="text-xs text-zinc-500 font-normal">/ month</span>
+                  ₹0 <span className="text-xs text-zinc-500 font-normal">/ month</span>
                 </div>
                 <p className="text-xs text-zinc-500">Perfect for solo founders, freelancers, and small side projects.</p>
                 <ul className="text-xs sm:text-sm text-zinc-600 dark:text-zinc-400 space-y-3 pt-2">
@@ -1085,19 +1086,19 @@ export default function SaaSMarketingLandingPage() {
               </Link>
             </div>
 
-            {/* Pro Workspace */}
+            {/* Agency Pro */}
             <div className="p-8 rounded-3xl bg-white dark:bg-[#131317] border-2 border-blue-600 flex flex-col justify-between space-y-6 shadow-xl relative scale-100 md:scale-105 z-10">
               <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 px-3.5 py-1 rounded-full bg-blue-600 text-white text-[10px] font-bold tracking-wider uppercase shadow-md flex items-center gap-1">
                 <span>★</span>
                 <span>Most Popular</span>
               </div>
               <div className="space-y-4">
-                <h3 className="text-lg font-bold text-zinc-900 dark:text-white">Pro Workspace</h3>
+                <h3 className="text-lg font-bold text-zinc-900 dark:text-white">Agency Pro</h3>
                 <div className="text-3xl sm:text-4xl font-extrabold text-zinc-900 dark:text-white">
-                  {billingPeriod === "yearly" ? "$24" : "$29"}{" "}
+                  {billingPeriod === "yearly" ? "₹1,999" : "₹2,499"}{" "}
                   <span className="text-xs text-zinc-500 font-normal">/ month</span>
                 </div>
-                <p className="text-xs text-zinc-500">For fast-growing teams, boutique agencies, and consultancies.</p>
+                <p className="text-xs text-zinc-500">For fast-growing digital agencies, boutique agencies, and consultancies.</p>
                 <ul className="text-xs sm:text-sm text-zinc-700 dark:text-zinc-300 space-y-3 pt-2">
                   <li className="flex items-center gap-2">✓ <strong>Unlimited</strong> Team Members</li>
                   <li className="flex items-center gap-2">✓ Admin-Centric Google Drive & Calendar</li>
@@ -1120,12 +1121,12 @@ export default function SaaSMarketingLandingPage() {
               <div className="space-y-4">
                 <h3 className="text-lg font-bold text-zinc-900 dark:text-white">Enterprise</h3>
                 <div className="text-3xl sm:text-4xl font-extrabold text-zinc-900 dark:text-white">
-                  {billingPeriod === "yearly" ? "$79" : "$99"}{" "}
+                  {billingPeriod === "yearly" ? "₹6,499" : "₹7,999"}{" "}
                   <span className="text-xs text-zinc-500 font-normal">/ month</span>
                 </div>
                 <p className="text-xs text-zinc-500">For large digital agencies requiring dedicated SLA & onboarding.</p>
                 <ul className="text-xs sm:text-sm text-zinc-600 dark:text-zinc-400 space-y-3 pt-2">
-                  <li className="flex items-center gap-2">✓ Everything in Pro Workspace</li>
+                  <li className="flex items-center gap-2">✓ Everything in Agency Pro</li>
                   <li className="flex items-center gap-2">✓ Custom Domain Booking Portal</li>
                   <li className="flex items-center gap-2">✓ Complete Audit Trail & Activity Logs</li>
                   <li className="flex items-center gap-2">✓ 24/7 Dedicated Support & VIP SLA</li>
@@ -1174,32 +1175,7 @@ export default function SaaSMarketingLandingPage() {
       </section>
 
       {/* 8. Footer */}
-      <footer className="border-t border-zinc-200/80 dark:border-zinc-800/80 py-12 bg-white dark:bg-[#070709] text-xs text-zinc-500">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-6">
-          <div className="flex items-center gap-3">
-            <img src="/myicon.png" alt="Logo" className="w-6 h-6 rounded-lg object-contain shadow-xs" />
-            <span className="font-bold text-zinc-900 dark:text-white text-sm">My Manager</span>
-            <span className="text-zinc-400">• The Unified Digital Business Workspace</span>
-          </div>
-
-          <div className="flex items-center gap-6 font-medium">
-            <a href="#features" className="hover:text-zinc-900 dark:hover:text-white transition">Features</a>
-            <a href="#architecture" className="hover:text-zinc-900 dark:hover:text-white transition">Architecture</a>
-            <a href="#pricing" className="hover:text-zinc-900 dark:hover:text-white transition">Pricing</a>
-            <Link href="/book" className="hover:text-zinc-900 dark:hover:text-white transition">Book Meeting</Link>
-            <Link href="/login" className="hover:text-zinc-900 dark:hover:text-white transition">Sign In</Link>
-          </div>
-
-          <div className="flex items-center gap-3 text-zinc-400">
-            <span className="inline-flex items-center gap-1 text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              All Systems Operational
-            </span>
-            <span>•</span>
-            <span>© {new Date().getFullYear()} My Manager SaaS.</span>
-          </div>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }

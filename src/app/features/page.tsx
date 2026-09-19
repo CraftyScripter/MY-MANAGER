@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import ThemeToggle from "@/components/ThemeToggle";
+import Footer from "@/components/Footer";
 
 export default function FeaturesPage() {
   const [currentUser, setCurrentUser] = useState<any>(null);
@@ -296,21 +297,7 @@ export default function FeaturesPage() {
       </section>
 
       {/* 5. Footer */}
-      <footer className="border-t border-zinc-200 dark:border-zinc-800 py-8 bg-white dark:bg-[#070709] text-center text-xs text-zinc-500">
-        <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <img src="/myicon.png" alt="My Manager" className="w-5 h-5 rounded-md object-contain" />
-            <span className="font-semibold text-zinc-800 dark:text-zinc-200">My Manager Workspace OS</span>
-          </div>
-          <div>© {new Date().getFullYear()} My Manager SaaS. All rights reserved.</div>
-          <div className="flex items-center gap-4">
-            <Link href="/" className="hover:underline">Home</Link>
-            <Link href="/features" className="hover:underline">Features</Link>
-            <Link href="/pricing" className="hover:underline">Pricing</Link>
-            <Link href="/book" className="hover:underline">Book Demo</Link>
-          </div>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }

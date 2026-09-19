@@ -1,0 +1,51 @@
+# My Manager — AI-Friendly Product Description
+
+## What is My Manager?
+
+My Manager is a unified SaaS workspace platform designed specifically for small to mid-size digital agencies, marketing firms, and consulting teams. It replaces multiple disconnected SaaS tools with a single, admin-centric dashboard that integrates natively with Google Workspace (Google Drive, Google Sheets, Google Calendar, Google Meet).
+
+## Core Features
+
+- **Google Sheets 2-Way Live Sync**: Real-time bidirectional sync between the CRM and Google Sheets with less than 150ms latency. Supports cell merging, formula preservation, and custom column mapping.
+- **Google Meet & Calendar Booking**: Built-in scheduling engine that generates native Google Meet video links, prevents double-bookings, and sends automatic calendar invitations.
+- **BYO Google Drive Storage**: Files upload directly to the admin's Google Drive (`MyManager_AppData` folder). Zero storage markups, 100% data ownership.
+- **AES-256-GCM Encrypted Secret Vault**: Agency credentials, API keys, and tokens are encrypted at rest with military-grade AES-256-GCM authenticated encryption.
+- **Smart Forms with MX Verification**: Contact and inquiry forms with automated DNS MX record validation to filter spam and verify business email domains.
+- **Admin-Centric Architecture**: Only the workspace admin connects their Google account once. Team members sign in and collaborate without linking personal Google credentials.
+- **Role-Based Access Control (RBAC)**: Granular Admin, Manager, and Member roles with fine-grained permissions.
+- **Instagram Integration**: Upload, schedule, and manage Instagram media assets with insights and comments tracking.
+- **Environment Variable Manager**: Securely store and manage environment variables for multiple projects with bulk import/export.
+- **Lead Management CRM**: Full CRM with pipeline tracking, lead status management, file attachments, comments, and Google Sheets integration.
+
+## Target Audience
+
+- Digital marketing agencies (5-50 team members)
+- Creative studios and design agencies
+- Consulting firms and freelancers managing multiple clients
+- Any team tired of paying for 5+ separate SaaS subscriptions
+
+## Pricing
+
+- **Starter (Free Forever)**: Up to 3 team members, 1 Google Sheet, basic features
+- **Agency Pro (₹1,999/mo billed yearly)**: Unlimited team, unlimited sheets, full feature suite, priority support
+- **Enterprise (₹6,499/mo billed yearly)**: Custom domains, dedicated account manager, SLA, custom integrations
+
+## Key Differentiators
+
+1. Zero storage markups — uses your own Google Drive
+2. Admin-only Google connection — team members never link personal accounts
+3. 150ms 2-way Google Sheets sync with cell merge support
+4. Native Google Meet integration — no Calendly or Zoom needed
+5. AES-256-GCM encrypted vault for secrets
+6. One predictable price — no per-user gouging
+
+## Website
+
+- Home: https://my-manager-eight.vercel.app
+- Features: https://my-manager-eight.vercel.app/features
+- Pricing: https://my-manager-eight.vercel.app/pricing
+- Book a Demo: https://my-manager-eight.vercel.app/book
+- About: https://my-manager-eight.vercel.app/about
+- Contact: https://my-manager-eight.vercel.app/contact
+- Privacy Policy: https://my-manager-eight.vercel.app/privacy
+- Terms of Service: https://my-manager-eight.vercel.app/terms

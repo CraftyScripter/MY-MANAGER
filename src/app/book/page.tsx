@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import ThemeToggle from "@/components/ThemeToggle";
+import Footer from "@/components/Footer";
 
 interface TimeSlot {
   start: string;
@@ -429,9 +430,7 @@ export default function PublicBookingPage() {
       </main>
 
       {/* Footer */}
-      <footer className="py-4 text-center text-xs text-zinc-500 border-t border-zinc-200 dark:border-zinc-800">
-        © {new Date().getFullYear()} My Manager SaaS. All rights reserved.
-      </footer>
+      <Footer />
     </div>
   );
 }
