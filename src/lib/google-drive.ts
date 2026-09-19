@@ -173,7 +173,8 @@ export async function listDriveSpreadsheets(accessToken: string): Promise<DriveF
 }
 
 /**
- * Performs a full encrypted backup of application data directly into the user's Google Drive folder.
+ * Performs a full encrypted backup of ALL application data into Google Drive.
+ * Backs up: payments, enquiries, form projects, instagram, credentials, env vars, users, leads, team, activity logs
  */
 export async function createEncryptedDriveBackup(userId: string = "admin") {
   const account = await getValidGoogleAccount(userId);
@@ -183,7 +184,6 @@ export async function createEncryptedDriveBackup(userId: string = "admin") {
 
   const folderId = account.driveFolderId || (await ensureAppDataFolder(account.accessToken));
 
-  // If folderId was not stored, update it
   if (!account.driveFolderId) {
     await prisma.googleAccount.update({
       where: { id: account.id },
@@ -191,26 +191,86 @@ export async function createEncryptedDriveBackup(userId: string = "admin") {
     });
   }
 
-  // 1. Gather backup snapshot data from DB
-  const [users, leadFolders, leadFiles, sheetLinks, envProjects] = await Promise.all([
-    prisma.user.findMany({ select: { id: true, name: true, email: true, role: true, permissions: true, createdAt: true } }),
+  // 1. Gather ALL backup data from DB
+  const [
+    users,
+    payments,
+    paymentAuditLogs,
+    contactEnquiries,
+    promiseMeEnquiries,
+    credentials,
+    credentialLinks,
+    leadFolders,
+    leadFiles,
+    leadColumns,
+    leadTabs,
+    leads,
+    sheetComments,
+    sheetLinks,
+    envProjects,
+    formProjects,
+    formSchemas,
+    formSubmissions,
+    formApiKeys,
+    instagramAccounts,
+    instagramPosts,
+    activityLogs,
+    appointments,
+  ] = await Promise.all([
+    prisma.user.findMany(),
+    prisma.payment.findMany(),
+    prisma.paymentAuditLog.findMany(),
+    prisma.contactEnquiry.findMany(),
+    prisma.promiseMeEnquiry.findMany(),
+    prisma.credential.findMany(),
+    prisma.credentialLink.findMany(),
     prisma.leadFolder.findMany(),
-    prisma.leadFile.findMany({ include: { columns: true, tabs: true } }),
+    prisma.leadFile.findMany(),
+    prisma.leadColumn.findMany(),
+    prisma.leadTab.findMany(),
+    prisma.lead.findMany(),
+    prisma.sheetComment.findMany(),
     prisma.googleSheetLink.findMany(),
     prisma.envProject.findMany({ include: { environments: { include: { variables: true } } } }),
+    prisma.formProject.findMany(),
+    prisma.formSchema.findMany(),
+    prisma.formSubmission.findMany(),
+    prisma.formApiKey.findMany(),
+    prisma.instagramAccount.findMany(),
+    prisma.instagramPostLog.findMany(),
+    prisma.activityLog.findMany(),
+    prisma.appointment.findMany(),
   ]);
 
   const backupPayload = {
     appName: "My Manager",
-    version: "1.0.0",
+    version: "2.0.0",
     backedUpAt: new Date().toISOString(),
     userEmail: account.email,
     data: {
       users,
+      payments,
+      paymentAuditLogs,
+      contactEnquiries,
+      promiseMeEnquiries,
+      credentials,
+      credentialLinks,
       leadFolders,
       leadFiles,
+      leadColumns,
+      leadTabs,
+      leads,
+      sheetComments,
       sheetLinks,
       envProjects,
+      formProjects,
+      formSchemas,
+      formSubmissions,
+      formApiKeys,
+      instagramAccounts,
+      instagramPosts,
+      activityLogs,
+      appointments,
     },
   };
 
@@ -218,7 +278,7 @@ export async function createEncryptedDriveBackup(userId: string = "admin") {
   const encryptedPayload = encrypt(rawJson);
 
   const finalBackupFileContent = JSON.stringify({
-    format: "MY_MANAGER_ENCRYPTED_BACKUP_V1",
+    format: "MY_MANAGER_ENCRYPTED_BACKUP_V2",
     algorithm: "AES-256-GCM",
     timestamp: new Date().toISOString(),
     encryptedData: encryptedPayload,
@@ -258,5 +318,112 @@ export async function createEncryptedDriveBackup(userId: string = "admin") {
     folderId,
     backupFile: timestampName,
     backedUpAt: now.toISOString(),
+  };
+}
+
+/**
+ * List all backup files in Google Drive.
+ */
+export async function listBackupFiles(userId: string = "admin") {
+  const account = await getValidGoogleAccount(userId);
+  if (!account) throw new Error("Google account not connected");
+
+  const folderId = account.driveFolderId;
+  if (!folderId) throw new Error("Backup folder not found. Run a backup first.");
+
+  const query = encodeURIComponent(
+    `'${folderId}' in parents and name contains 'backup_' and trashed = false`
+  );
+  const url = `https://www.googleapis.com/drive/v3/files?q=${query}&orderBy=name desc&fields=files(id, name, size, modifiedTime)`;
+
+  const res = await fetch(url, {
+    headers: { Authorization: `Bearer ${account.accessToken}` },
+  });
+
+  if (!res.ok) throw new Error(`Failed to list backups: ${res.status}`);
+  const data = await res.json();
+  return data.files || [];
+}
+
+/**
+ * Download and decrypt a backup file from Google Drive, then restore data to database.
+ */
+export async function restoreFromBackup(
+  backupFileId: string,
+  userId: string = "admin",
+  options: {
+    restorePayments?: boolean;
+    restoreEnquiries?: boolean;
+    restoreCredentials?: boolean;
+    restoreFormProjects?: boolean;
+    restoreInstagram?: boolean;
+    restoreActivityLogs?: boolean;
+    restoreAppointments?: boolean;
+  } = {}
+) {
+  const { decrypt } = await import("./encryption");
+  const account = await getValidGoogleAccount(userId);
+  if (!account) throw new Error("Google account not connected");
+
+  // 1. Download the backup file
+  const url = `https://www.googleapis.com/drive/v3/files/${backupFileId}?alt=media`;
+  const res = await fetch(url, {
+    headers: { Authorization: `Bearer ${account.accessToken}` },
+  });
+
+  if (!res.ok) throw new Error(`Failed to download backup: ${res.status}`);
+  const fileContent = await res.json();
+
+  // 2. Decrypt
+  if (fileContent.format !== "MY_MANAGER_ENCRYPTED_BACKUP_V2" && fileContent.format !== "MY_MANAGER_ENCRYPTED_BACKUP_V1") {
+    throw new Error("Unsupported backup format");
+  }
+
+  const decrypted = decrypt(fileContent.encryptedData);
+  const payload = JSON.parse(decrypted);
+  const data = payload.data;
+
+  const results: Record<string, number> = {};
+
+  // 3. Restore each collection (only if data exists and option is enabled)
+  const restore = async (model: string, items: any[], enabled?: boolean) => {
+    if (!enabled || !items || items.length === 0) return;
+    // Use createMany with skipDuplicates to avoid errors on existing IDs
+    try {
+      const res = await (prisma as any)[model].createMany({
+        data: items.map((item: any) => {
+          // Remove _id to let MongoDB generate new IDs
+          const { _id, id, ...rest } = item;
+          return rest;
+        }),
+        skipDuplicates: true,
+      });
+      results[model] = res.count;
+    } catch (e: any) {
+      console.error(`Restore ${model} error:`, e.message);
+      results[model] = 0;
+    }
+  };
+
+  await Promise.all([
+    restore("payment", data.payments, options.restorePayments),
+    restore("contactEnquiry", data.contactEnquiries, options.restoreEnquiries),
+    restore("promiseMeEnquiry", data.promiseMeEnquiries, options.restoreEnquiries),
+    restore("credential", data.credentials, options.restoreCredentials),
+    restore("credentialLink", data.credentialLinks, options.restoreCredentials),
+    restore("formProject", data.formProjects, options.restoreFormProjects),
+    restore("formSchema", data.formSchemas, options.restoreFormProjects),
+    restore("formSubmission", data.formSubmissions, options.restoreFormProjects),
+    restore("formApiKey", data.formApiKeys, options.restoreFormProjects),
+    restore("instagramAccount", data.instagramAccounts, options.restoreInstagram),
+    restore("instagramPostLog", data.instagramPosts, options.restoreInstagram),
+    restore("activityLog", data.activityLogs, options.restoreActivityLogs),
+    restore("appointment", data.appointments, options.restoreAppointments),
+  ]);
+
+  return {
+    success: true,
+    backupDate: payload.backedUpAt,
+    restored: results,
   };
 }
