@@ -227,25 +227,6 @@ model PromiseMeEnquiry {
   @@index([createdAt])
 }
 
-model DashboardSnapshot {
-  id                   String   @id @default("default") @map("_id")
-  lastUpdated          DateTime @default(now())
-  totalEnquiries       Int      @default(0)
-  repliedEnquiries     Int      @default(0)
-  pendingEnquiries     Int      @default(0)
-  seenEnquiries        Int      @default(0)
-  replyRate            Int      @default(0)
-  seenRate             Int      @default(0)
-  platformDistribution String   @default("[]")
-  dailyData            String   @default("[]")
-  totalCredentials     Int      @default(0)
-  totalIncome          Float    @default(0)
-  totalExpenses        Float    @default(0)
-  totalRefunds         Float    @default(0)
-  netBalance           Float    @default(0)
-  pendingAmount        Float    @default(0)
-}
-
 model EnvProject {
   id          String   @id @default(cuid()) @map("_id")
   name        String

@@ -10,12 +10,6 @@ interface FinancialTrend {
   expenses: number;
 }
 
-interface LeadSource {
-  name: string;
-  count: number;
-  percentage: number;
-}
-
 interface TeamMember {
   id: string;
   name: string;
@@ -41,15 +35,24 @@ interface InstagramAccount {
   mediaCount?: number | null;
 }
 
+interface FormBridgeProject {
+  id: string;
+  name: string;
+  slug: string;
+  isActive: boolean;
+  createdAt: string;
+}
+
 interface DashboardStats {
   total: number;
   replied: number;
   pending: number;
   replyRate: number;
-  leads?: {
-    total: number;
-    last30Days: number;
-    sources: LeadSource[];
+  formBridge?: {
+    totalProjects: number;
+    activeProjects: number;
+    totalSubmissions: number;
+    projects: FormBridgeProject[];
   };
   paymentSummary?: {
     totalIncome: number;
@@ -86,15 +89,12 @@ interface ActivityItem {
   createdAt: string;
 }
 
-const DONUT_COLORS = ["#3b82f6", "#10b981", "#f59e0b", "#ec4899", "#8b5cf6", "#06b6d4"];
-
 export default function AdminPage() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [timeRange, setTimeRange] = useState("30d");
   const [teamSearch, setTeamSearch] = useState("");
-  const [showAllSources, setShowAllSources] = useState(false);
   const [toast, setToast] = useState<{ type: "success" | "error"; message: string } | null>(null);
 
   const timeRangeOptions = [
@@ -112,7 +112,7 @@ export default function AdminPage() {
       const res = await fetch(`/api/admin/stats?_t=${Date.now()}`, { cache: "no-store" });
       if (!res.ok) throw new Error("Failed to load statistics");
       const data: DashboardStats = await res.json();
-      const signature = `${data.total}_${data.replied}_${data.pending}_${data.leads?.total}_${data.paymentSummary?.netBalance}_${data.teamSummary?.total}`;
+      const signature = `${data.total}_${data.replied}_${data.pending}_${data.formBridge?.totalProjects}_${data.paymentSummary?.netBalance}_${data.teamSummary?.total}`;
       if (isBackground && signature === lastDataSignatureRef.current) {
         return;
       }
@@ -175,9 +175,9 @@ export default function AdminPage() {
   const totalExpenses = stats?.paymentSummary?.totalExpenses ?? 0;
   const totalSubmissions = stats?.total ?? 0;
   const replyRate = stats?.replyRate ?? 0;
-  const totalLeads = stats?.leads?.total ?? 0;
-  const leadsLast30Days = stats?.leads?.last30Days ?? 0;
-  const leadSources = stats?.leads?.sources || [];
+  const formBridgeProjects = stats?.formBridge?.totalProjects ?? 0;
+  const formBridgeActive = stats?.formBridge?.activeProjects ?? 0;
+  const formBridgeSubmissions = stats?.formBridge?.totalSubmissions ?? 0;
   const financialTrends = stats?.paymentSummary?.financialTrends || [];
   const teamMembers = stats?.teamSummary?.members || [];
   const recentActivities = stats?.recentActivities || [];
@@ -302,24 +302,24 @@ export default function AdminPage() {
           </div>
         </div>
 
-        {/* Card 3: Active Leads */}
+        {/* Card 3: FormBridge Projects */}
         <div className="p-5 bg-white dark:bg-[#111114] border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-xs hover:border-zinc-300 dark:hover:border-zinc-700 transition-all flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">Active Leads</span>
+            <span className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">FormBridge</span>
             <span className="p-2 rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20">
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 12h16.5m-16.5 3.75h16.5M3.75 19.5h16.5M5.625 4.5h12.75a1.875 1.875 0 010 3.75H5.625a1.875 1.875 0 010-3.75z" />
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m9.86-4.257a4.5 4.5 0 00-6.364-6.364L4.5 7.5l4.5 4.5-1.757 1.757a4.5 4.5 0 006.364 6.364l4.5-4.5a4.5 4.5 0 00-.324-.693z" />
               </svg>
             </span>
           </div>
 
           <div className="mt-3">
-            <p className="text-2xl font-bold text-zinc-900 dark:text-white">{totalLeads}</p>
-            <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">{leadsLast30Days} in last 30 days</p>
+            <p className="text-2xl font-bold text-zinc-900 dark:text-white">{formBridgeProjects}</p>
+            <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">{formBridgeSubmissions} total submissions</p>
           </div>
           <div className="mt-3 pt-3 border-t border-zinc-100 dark:border-zinc-800/60 flex items-center justify-between text-xs">
-            <span className="text-zinc-400">Spreadsheet DB</span>
-            <span className="font-semibold text-purple-600 dark:text-purple-400">Live Synchronized</span>
+            <span className="text-zinc-400">Active Projects</span>
+            <span className="font-semibold text-purple-600 dark:text-purple-400">{formBridgeActive}</span>
           </div>
         </div>
 
@@ -426,87 +426,62 @@ export default function AdminPage() {
           </div>
         </div>
 
-        {/* Right Chart: Real Lead Source Breakdown */}
+        {/* Right: FormBridge Projects Overview */}
         <div className="lg:col-span-5 p-6 bg-white dark:bg-[#111114] border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-xs flex flex-col justify-between">
           <div className="flex items-center justify-between pb-3 border-b border-zinc-100 dark:border-zinc-800/60">
             <div>
-              <h2 className="text-sm font-bold text-zinc-900 dark:text-white">Lead Source Breakdown</h2>
-              <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">Channel attribution and lead category categorization</p>
+              <h2 className="text-sm font-bold text-zinc-900 dark:text-white">FormBridge Projects</h2>
+              <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">Multi-site form endpoints and submission status</p>
             </div>
-            {leadSources.length > 0 && (
-              <span className="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 shrink-0">
-                {leadSources.length} {leadSources.length === 1 ? "source" : "sources"}
-              </span>
-            )}
+            <Link href="/admin/forms" className="text-[11px] font-semibold text-purple-500 hover:underline">
+              Manage →
+            </Link>
           </div>
 
           <div className="py-4 flex-1 flex flex-col justify-between">
-            {leadSources.length > 0 ? (
-              <>
-                <div className="space-y-3 max-h-[280px] overflow-y-auto pr-1.5 scrollbar-thin">
-                  {(showAllSources ? leadSources : leadSources.slice(0, 5)).map((source, idx) => {
-                    const color = DONUT_COLORS[idx % DONUT_COLORS.length];
-                    return (
-                      <div key={idx} className="space-y-1">
-                        <div className="flex items-center justify-between text-xs font-semibold">
-                          <span className="flex items-center gap-2 text-zinc-800 dark:text-zinc-200 min-w-0 pr-2">
-                            <span style={{ backgroundColor: color }} className="w-2.5 h-2.5 rounded-full shrink-0" />
-                            <span className="truncate">{source.name}</span>
-                          </span>
-                          <div className="flex items-center gap-2 shrink-0">
-                            <span className="text-zinc-400 text-xs font-normal">({source.count})</span>
-                            <span className="text-zinc-900 dark:text-white font-bold">{source.percentage}%</span>
-                          </div>
-                        </div>
-                        <div className="w-full bg-zinc-100 dark:bg-zinc-800/60 h-2 rounded-full overflow-hidden">
-                          <div
-                            style={{ width: `${Math.max(source.percentage, 3)}%`, backgroundColor: color }}
-                            className="h-full rounded-full transition-all duration-500"
-                          />
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-
-                {leadSources.length > 5 && (
-                  <button
-                    onClick={() => setShowAllSources(!showAllSources)}
-                    className="mt-3.5 w-full py-2 px-3 rounded-xl bg-zinc-100 hover:bg-zinc-200/80 dark:bg-zinc-800/70 dark:hover:bg-zinc-800 text-xs font-semibold text-zinc-700 dark:text-zinc-300 transition-all flex items-center justify-center gap-1.5 cursor-pointer border border-zinc-200/60 dark:border-zinc-700/50"
+            {stats?.formBridge?.projects && stats.formBridge.projects.length > 0 ? (
+              <div className="space-y-2.5">
+                {stats.formBridge.projects.slice(0, 5).map((project) => (
+                  <Link
+                    key={project.id}
+                    href={`/admin/forms/${project.id}`}
+                    className="p-3 rounded-xl bg-slate-50 dark:bg-zinc-900/40 border border-zinc-100 dark:border-zinc-800/50 flex items-center justify-between hover:border-purple-300 dark:hover:border-purple-700 transition group"
                   >
-                    {showAllSources ? (
-                      <>
-                        <span>Show Top 5 Only</span>
-                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 15l7-7 7 7" />
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="w-8 h-8 rounded-lg bg-purple-500/10 text-purple-500 border border-purple-500/20 flex items-center justify-center shrink-0">
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m9.86-4.257a4.5 4.5 0 00-6.364-6.364L4.5 7.5l4.5 4.5-1.757 1.757a4.5 4.5 0 006.364 6.364l4.5-4.5a4.5 4.5 0 00-.324-.693z" />
                         </svg>
-                      </>
-                    ) : (
-                      <>
-                        <span>+{leadSources.length - 5} More Categories (Show All)</span>
-                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                        </svg>
-                      </>
-                    )}
-                  </button>
-                )}
-              </>
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-xs font-semibold text-zinc-900 dark:text-white truncate group-hover:text-purple-600 dark:group-hover:text-purple-400 transition">
+                          {project.name}
+                        </p>
+                        <p className="text-[10px] text-zinc-400 font-mono truncate">/api/forms/{project.slug}/submit</p>
+                      </div>
+                    </div>
+                    <span
+                      className={`w-2 h-2 rounded-full shrink-0 ${
+                        project.isActive ? "bg-emerald-500" : "bg-zinc-400"
+                      }`}
+                    />
+                  </Link>
+                ))}
+              </div>
             ) : (
               <div className="text-center py-6">
-                <div className="w-12 h-12 rounded-2xl bg-zinc-100 dark:bg-zinc-800/80 border border-zinc-200 dark:border-zinc-700/60 flex items-center justify-center mx-auto mb-3 text-zinc-400">
+                <div className="w-12 h-12 rounded-2xl bg-purple-500/10 border border-purple-500/20 text-purple-500 flex items-center justify-center mx-auto mb-3">
                   <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 6a7.5 7.5 0 107.5 7.5h-7.5V6z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 10.5H21A7.5 7.5 0 0013.5 3v7.5z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
                   </svg>
                 </div>
-                <p className="text-sm font-semibold text-zinc-800 dark:text-zinc-200">No categorized leads yet</p>
-                <p className="text-xs text-zinc-400 mt-1 mb-3">Add categories to your leads to view source distributions.</p>
+                <p className="text-sm font-semibold text-zinc-800 dark:text-zinc-200">No projects yet</p>
+                <p className="text-xs text-zinc-400 mt-1 mb-3">Create your first FormBridge project to start collecting form submissions.</p>
                 <Link
-                  href="/admin/leads"
-                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold shadow-xs transition-all active:scale-97"
+                  href="/admin/forms"
+                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-semibold shadow-xs transition-all active:scale-97"
                 >
-                  Manage Leads →
+                  Create Project →
                 </Link>
               </div>
             )}
@@ -675,17 +650,17 @@ export default function AdminPage() {
         <h2 className="text-xs font-bold text-zinc-400 uppercase tracking-wider">Quick Actions</h2>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
           <Link
-            href="/admin/leads"
+            href="/admin/forms"
             className="p-5 bg-white dark:bg-[#111114] hover:bg-zinc-50 dark:hover:bg-zinc-800/80 border border-zinc-200 dark:border-zinc-800 rounded-2xl transition-all duration-150 group flex flex-col items-center text-center justify-center gap-2.5 shadow-xs active:scale-97"
           >
-            <div className="w-11 h-11 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 flex items-center justify-center group-hover:scale-110 transition">
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+            <div className="w-11 h-11 rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20 flex items-center justify-center group-hover:scale-110 transition">
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m9.86-4.257a4.5 4.5 0 00-6.364-6.364L4.5 7.5l4.5 4.5-1.757 1.757a4.5 4.5 0 006.364 6.364l4.5-4.5a4.5 4.5 0 00-.324-.693z" />
               </svg>
             </div>
             <div>
-              <p className="text-xs font-bold text-zinc-900 dark:text-white">Add New Lead</p>
-              <p className="text-[11px] text-zinc-400 mt-0.5">Spreadsheet & sync</p>
+              <p className="text-xs font-bold text-zinc-900 dark:text-white">FormBridge</p>
+              <p className="text-[11px] text-zinc-400 mt-0.5">Form endpoints</p>
             </div>
           </Link>
 

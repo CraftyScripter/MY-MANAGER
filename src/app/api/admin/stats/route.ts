@@ -9,17 +9,13 @@ export async function GET() {
   }
 
   try {
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-
     const [
       contactCount,
       promiseMeCount,
       contactRepliedCount,
       promiseMeRepliedCount,
-      leadsTotal,
-      leadsLast30Days,
-      leads,
+      formProjects,
+      formSubmissions,
       credentialsCount,
       envVarsCount,
       payments,
@@ -34,9 +30,11 @@ export async function GET() {
       prisma.promiseMeEnquiry.count(),
       prisma.contactEnquiry.count({ where: { replied: true } }),
       prisma.promiseMeEnquiry.count({ where: { replied: true } }),
-      prisma.lead.count(),
-      prisma.lead.count({ where: { createdAt: { gte: thirtyDaysAgo } } }),
-      prisma.lead.findMany({ select: { category: true, status: true } }),
+      prisma.formProject.findMany({
+        select: { id: true, name: true, slug: true, isActive: true, createdAt: true },
+        orderBy: { createdAt: "desc" },
+      }),
+      prisma.formSubmission.count(),
       prisma.credential.count(),
       prisma.environmentVariable.count(),
       prisma.payment.findMany({
@@ -68,13 +66,16 @@ export async function GET() {
     const pendingEnquiries = totalEnquiries - repliedEnquiries;
     const replyRate = totalEnquiries > 0 ? Math.round((repliedEnquiries / totalEnquiries) * 100) : 0;
 
+    // FormBridge stats
+    const activeProjects = formProjects.filter((p) => p.isActive).length;
+    const totalFormBridgeSubmissions = formSubmissions;
+
     // Payments calculations
     let totalIncome = 0;
     let totalExpenses = 0;
     let totalRefunds = 0;
     let pendingAmount = 0;
 
-    // Group payments by Month (e.g. Jan, Feb, Mar)
     const monthlyPaymentMap: Record<string, { income: number; expenses: number; month: string }> = {};
 
     payments.forEach((p: { type: string; amount: string; status: string; date: Date | null; createdAt: Date }) => {
@@ -104,29 +105,20 @@ export async function GET() {
     const netBalance = totalIncome - totalExpenses - totalRefunds;
     const financialTrends = Object.values(monthlyPaymentMap);
 
-    // Lead Category / Source Breakdown
-    const categoryCountMap: Record<string, number> = {};
-    leads.forEach((l: { category: string | null; status: string }) => {
-      const cat = l.category?.trim() || "Uncategorized";
-      categoryCountMap[cat] = (categoryCountMap[cat] || 0) + 1;
-    });
-
-    const leadSourceBreakdown = Object.entries(categoryCountMap).map(([name, count]) => ({
-      name,
-      count,
-      percentage: leadsTotal > 0 ? parseFloat(((count / leadsTotal) * 100).toFixed(1)) : 0,
-    }));
-
     return NextResponse.json({
+      // Legacy form submissions
       total: totalEnquiries,
       replied: repliedEnquiries,
       pending: pendingEnquiries,
       replyRate,
-      leads: {
-        total: leadsTotal,
-        last30Days: leadsLast30Days,
-        sources: leadSourceBreakdown,
+      // FormBridge
+      formBridge: {
+        totalProjects: formProjects.length,
+        activeProjects,
+        totalSubmissions: totalFormBridgeSubmissions,
+        projects: formProjects,
       },
+      // Finance
       paymentSummary: {
         totalIncome: parseFloat(totalIncome.toFixed(2)),
         totalExpenses: parseFloat(totalExpenses.toFixed(2)),
@@ -135,6 +127,7 @@ export async function GET() {
         pendingAmount: parseFloat(pendingAmount.toFixed(2)),
         financialTrends,
       },
+      // System
       totalCredentials: credentialsCount,
       totalEnvVars: envVarsCount,
       teamSummary: {
