@@ -459,4 +459,68 @@ model Appointment {
   @@index([createdAt])
 }
 
+// ═══════════════════════════════════════════════════════════════════
+// FormBridge Platform - Multi-site Form Aggregation
+// ═══════════════════════════════════════════════════════════════════
+
+model FormProject {
+  id               String   @id @default(cuid()) @map("_id")
+  name             String
+  slug             String
+  description      String?
+  useDefaultSchema Boolean  @default(true)
+  isActive         Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  schema      FormSchema?
+  submissions FormSubmission[]
+  apiKey      FormApiKey?
+
+  @@unique([slug])
+  @@index([createdAt])
+}
+
+model FormSchema {
+  id        String   @id @default(cuid()) @map("_id")
+  projectId String
+  fields    Json     // Array of { key, label, type, required, options?, placeholder? }
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  project FormProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId])
+}
+
+model FormSubmission {
+  id            String   @id @default(cuid()) @map("_id")
+  projectId     String
+  data          Json     // Actual form field values
+  ipAddress     String?
+  userAgent     String?
+  emailVerified Boolean?
+  emailMx       String?
+  createdAt     DateTime @default(now())
+
+  project FormProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@index([createdAt])
+}
+
+model FormApiKey {
+  id        String   @id @default(cuid()) @map("_id")
+  projectId String
+  apiKey    String
+  isActive  Boolean  @default(true)
+  lastUsed  DateTime?
+  createdAt DateTime @default(now())
+
+  project FormProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId])
+  @@unique([apiKey])
+}
+
 
