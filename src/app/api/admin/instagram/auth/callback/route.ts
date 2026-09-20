@@ -47,6 +47,8 @@ export async function GET(request: NextRequest) {
         redirectUri
       );
 
+      console.log(`[Instagram Callback] Direct IG success: username=${profile.username}, id=${profile.id}`);
+
       await prisma.instagramAccount.upsert({
         where: { instagramId: profile.id },
         create: {
@@ -131,13 +133,17 @@ export async function GET(request: NextRequest) {
     const pagesData = await pagesRes.json();
     const pages = pagesData.data || [];
 
+    console.log(`[Instagram Callback] Facebook fallback: found ${pages.length} pages`);
+
     let connectedUsername = "";
     for (const page of pages) {
       if (page.instagram_business_account?.id) {
         const ig = page.instagram_business_account;
         const pageToken = page.access_token || accessToken;
-        const username = ig.username || "instagram_user";
+        const username = ig.username || "";
         connectedUsername = username;
+
+        console.log(`[Instagram Callback] FB page IG account: @${username} (${ig.id})`);
 
         await prisma.instagramAccount.upsert({
           where: { instagramId: ig.id },

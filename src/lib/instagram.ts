@@ -138,6 +138,7 @@ export async function fetchInstagramProfile(
   accessToken: string
 ): Promise<InstagramProfile | null> {
   const isInstagramToken = accessToken.startsWith("IG");
+  console.log(`[Instagram Profile] Fetching: instagramId=${instagramId}, tokenType=${isInstagramToken ? "IG" : "FB"}`);
 
   const fieldSets = [
     "id,username,name,profile_picture_url,followers_count,follows_count,media_count,biography,website,account_type",
@@ -170,9 +171,10 @@ export async function fetchInstagramProfile(
         if (res.ok) {
           const data = await res.json();
           if (data && (data.username || data.id)) {
+            console.log(`[Instagram Profile] Success: ${endpoint}`);
             return {
               id: data.id || instagramId,
-              username: data.username || "instagram_user",
+              username: data.username || "",
               name: data.name || null,
               profilePictureUrl: data.profile_picture_url || null,
               accountType: data.account_type || null,
@@ -183,8 +185,12 @@ export async function fetchInstagramProfile(
               followsCount: typeof data.follows_count === "number" ? data.follows_count : null,
             };
           }
+        } else {
+          console.warn(`[Instagram Profile] ${endpoint} returned ${res.status}`);
         }
-      } catch {}
+      } catch (err: any) {
+        console.warn(`[Instagram Profile] ${endpoint} failed:`, err?.message);
+      }
     }
   }
 
