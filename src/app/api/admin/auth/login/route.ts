@@ -1,13 +1,10 @@
 import { NextResponse } from "next/server";
 import {
-  validateCredentials,
-  createAdminToken,
   setAuthCookie,
   verifyPassword,
   createTokenForUser,
 } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { ALL_PERMISSIONS } from "@/lib/permissions";
 import { logActivity } from "@/lib/activity";
 
 export async function POST(request: Request) {
@@ -22,22 +19,7 @@ export async function POST(request: Request) {
       );
     }
 
-    if (validateCredentials(username, password)) {
-      const token = createAdminToken();
-      await setAuthCookie(token);
-
-      await logActivity({
-        action: "login",
-        section: "auth",
-        userEmail: username,
-        userName: "Admin",
-        details: { role: "admin" },
-        req: request,
-      });
-
-      return NextResponse.json({ success: true, role: "admin", permissions: ALL_PERMISSIONS });
-    }
-
+    // Database-only login — no env var bypass
     const user = await prisma.user.findUnique({
       where: { email: username },
       select: {

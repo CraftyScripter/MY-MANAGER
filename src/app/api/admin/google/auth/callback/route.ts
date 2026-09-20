@@ -44,39 +44,31 @@ export async function POST(request: Request) {
 
       // 3. Determine user ID (logged in user or matching admin/user email)
       const currentUser = await getCurrentUser();
-      let userId = currentUser?.id || "admin";
-
-      // If user was logging in via Google from login page
-      const adminEmail = process.env.ADMIN_USER || "copy76star76@gmail.com";
-      let isMasterAdmin = profile.email.toLowerCase() === adminEmail.toLowerCase();
+      let userId = currentUser?.id || "";
 
       if (!currentUser) {
-        if (isMasterAdmin) {
-          userId = "admin";
-          const adminToken = createAdminToken();
-          await setAuthCookie(adminToken);
-        } else {
-          // Check if user exists in database
-          let dbUser = await prisma.user.findUnique({
-            where: { email: profile.email.toLowerCase() },
-          });
+        // Find or create user in database — no hardcoded admin bypass
+        let dbUser = await prisma.user.findUnique({
+          where: { email: profile.email.toLowerCase() },
+        });
 
-          if (!dbUser) {
-            // Auto-create or activate user
-            dbUser = await prisma.user.create({
-              data: {
-                email: profile.email.toLowerCase(),
-                name: profile.name || profile.email.split("@")[0],
-                role: "admin",
-                permissions: ["*"],
-                isActive: true,
-              },
-            });
-          }
-          userId = dbUser.id;
-          const userToken = createTokenForUser(dbUser.id, dbUser.role, dbUser.permissions);
-          await setAuthCookie(userToken);
+        if (!dbUser) {
+          // Auto-create user
+          dbUser = await prisma.user.create({
+            data: {
+              email: profile.email.toLowerCase(),
+              name: profile.name || profile.email.split("@")[0],
+              role: "admin",
+              permissions: ["*"],
+              isActive: true,
+            },
+          });
         }
+        userId = dbUser.id;
+        const userToken = createTokenForUser(dbUser.id, dbUser.role, dbUser.permissions);
+        await setAuthCookie(userToken);
+      } else {
+        userId = currentUser.id;
       }
 
       // 4. Ensure complete dedicated workspace folder tree in Google Drive (AppData, Finance_Proofs, Instagram_Media, Documents)

@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { getCurrentUser, createAdminToken, createTokenForUser, setAuthCookie } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
+import { getCurrentUser, createTokenForUser, setAuthCookie } from "@/lib/auth";
 import { getWorkspaceAdminGoogleAccount } from "@/lib/google";
 
 export async function GET() {
@@ -11,29 +10,23 @@ export async function GET() {
       return NextResponse.json({ authenticated: false }, { status: 401 });
     }
 
-    // Refresh the auth cookie with fresh token to implement sliding session renewal
-    const freshToken =
-      user.role === "admin"
-        ? createAdminToken()
-        : createTokenForUser(user.id, user.role, user.permissions);
+    // Sliding session renewal — always use real user data
+    const freshToken = createTokenForUser(user.id, user.role, user.permissions);
     await setAuthCookie(freshToken);
 
     // Fetch linked Google profile picture and display name if available
     let image: string | null = null;
     let googleName: string | null = null;
 
-    // Only fetch Google image for admin — team members show first-letter avatar
-    if (user.role === "admin") {
-      try {
-        const googleAccount = await getWorkspaceAdminGoogleAccount(user.id);
-        image = googleAccount?.picture || null;
-        googleName = googleAccount?.name || null;
-      } catch {
-        // Non-blocking – image stays null
-      }
+    try {
+      const googleAccount = await getWorkspaceAdminGoogleAccount(user.id);
+      image = googleAccount?.picture || null;
+      googleName = googleAccount?.name || null;
+    } catch {
+      // Non-blocking – image stays null
     }
 
-    const displayName = (user.id === "admin" && googleName) ? googleName : user.name;
+    const displayName = googleName || user.name;
 
     return NextResponse.json({
       authenticated: true,

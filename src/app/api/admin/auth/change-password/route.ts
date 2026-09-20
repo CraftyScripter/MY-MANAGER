@@ -28,41 +28,7 @@ export async function POST(request: Request) {
       );
     }
 
-    if (user.id === "admin") {
-      const adminPass = process.env.ADMIN_PASS;
-      if (!adminPass || currentPassword !== adminPass) {
-        return NextResponse.json(
-          { error: "Current password is incorrect" },
-          { status: 401 }
-        );
-      }
-
-      const hashed = await hashPassword(newPassword);
-      await prisma.user.upsert({
-        where: { id: "admin" },
-        create: {
-          id: "admin",
-          name: "Admin",
-          email: process.env.ADMIN_USER || "admin",
-          passwordHash: hashed,
-          role: "admin",
-        },
-        update: {
-          passwordHash: hashed,
-        },
-      });
-
-      await logActivity({
-        action: "change_password",
-        section: "auth",
-        user,
-        details: { target: "admin" },
-        req: request,
-      });
-
-      return NextResponse.json({ success: true });
-    }
-
+    // Always use database for password change — no env var bypass
     const dbUser = await prisma.user.findUnique({
       where: { id: user.id },
       select: {

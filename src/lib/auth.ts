@@ -126,16 +126,7 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
   const payload = verifySignedToken(token);
   if (!payload) return null;
 
-  if (payload.role === "admin") {
-    return {
-      id: "admin",
-      name: "Admin",
-      email: process.env.ADMIN_USER || "admin",
-      role: "admin",
-      permissions: ALL_PERMISSIONS,
-    };
-  }
-
+  // Always check database — no hardcoded admin bypass
   const user = await prisma.user.findUnique({
     where: { id: payload.userId },
     select: {
