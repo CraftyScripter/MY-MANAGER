@@ -4,6 +4,7 @@ import {
   checkPermission,
   generateInvitationToken,
   getInvitationExpiry,
+  getEffectiveWorkspaceAdminId,
 } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { sendInvitationEmail } from "@/lib/nodemailer";
@@ -17,9 +18,25 @@ export async function GET() {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    // Admin sees their workspace members via WorkspaceMembership
+    const workspaceId = getEffectiveWorkspaceAdminId(user);
+
+    // Fetch workspace owner (Admin)
+    const workspaceOwner = await prisma.user.findUnique({
+      where: { id: workspaceId },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        phone: true,
+        role: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+
+    // Workspace members via WorkspaceMembership
     const memberships = await prisma.workspaceMembership.findMany({
-      where: { workspaceId: user.id },
+      where: { workspaceId },
       orderBy: { createdAt: "desc" },
       select: {
         id: true,
@@ -40,22 +57,49 @@ export async function GET() {
       },
     });
 
-    // Flatten for frontend compatibility
-    const members = memberships.map((m) => ({
-      id: m.user.id,
-      membershipId: m.id,
-      name: m.user.name,
-      email: m.user.email,
-      phone: m.user.phone,
-      role: m.role,
-      permissions: m.permissions,
-      isActive: m.isActive,
-      invitationToken: m.invitationToken,
-      createdAt: m.createdAt,
-      updatedAt: m.updatedAt,
-    }));
+    // Build members list: Workspace Owner first (as admin/owner), then members
+    const members = [];
+    if (workspaceOwner) {
+      members.push({
+        id: workspaceOwner.id,
+        membershipId: null,
+        name: workspaceOwner.name,
+        email: workspaceOwner.email,
+        phone: workspaceOwner.phone,
+        role: "admin",
+        permissions: ["*"],
+        isActive: true,
+        invitationToken: null,
+        createdAt: workspaceOwner.createdAt,
+        updatedAt: workspaceOwner.updatedAt,
+        isOwner: true,
+      });
+    }
 
-    return NextResponse.json({ members });
+    for (const m of memberships) {
+      if (workspaceOwner && m.user.id === workspaceOwner.id) continue;
+      members.push({
+        id: m.user.id,
+        membershipId: m.id,
+        name: m.user.name,
+        email: m.user.email,
+        phone: m.user.phone,
+        role: m.role || "member",
+        permissions: m.permissions,
+        isActive: m.isActive,
+        invitationToken: m.invitationToken,
+        createdAt: m.createdAt,
+        updatedAt: m.updatedAt,
+        isOwner: false,
+      });
+    }
+
+    return NextResponse.json({
+      members,
+      canManageTeam: user.role === "admin",
+      currentUserRole: user.role,
+      currentUserId: user.id,
+    });
   } catch (error) {
     console.error("Fetch team error:", error);
     return NextResponse.json(
@@ -68,8 +112,11 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const user = await getCurrentUser();
-    if (!user || !checkPermission(user, "team", "write")) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    if (!user || user.role !== "admin") {
+      return NextResponse.json(
+        { error: "Only workspace administrators can invite team members" },
+        { status: 403 }
+      );
     }
 
     const body = await request.json();
@@ -114,7 +161,7 @@ export async function POST(request: Request) {
     });
 
     // Check if already a member of this workspace
-    const workspaceOwnerId = user.id; // Current admin's ID is the workspace ID
+    const workspaceOwnerId = getEffectiveWorkspaceAdminId(user);
     const existingMembership = existingUser
       ? await prisma.workspaceMembership.findUnique({
           where: {

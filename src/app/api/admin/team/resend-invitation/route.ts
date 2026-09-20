@@ -5,14 +5,18 @@ import {
   checkPermission,
   generateInvitationToken,
   getInvitationExpiry,
+  getEffectiveWorkspaceAdminId,
 } from "@/lib/auth";
 import { sendInvitationEmail } from "@/lib/nodemailer";
 
 export async function POST(request: Request) {
   try {
     const user = await getCurrentUser();
-    if (!user || !checkPermission(user, "team")) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    if (!user || user.role !== "admin") {
+      return NextResponse.json(
+        { error: "Only administrators can resend invitations" },
+        { status: 403 }
+      );
     }
 
     const body = await request.json();
@@ -25,11 +29,13 @@ export async function POST(request: Request) {
       );
     }
 
+    const workspaceId = getEffectiveWorkspaceAdminId(user);
+
     // Find the workspace membership for this user
     const membership = await prisma.workspaceMembership.findUnique({
       where: {
         workspaceId_userId: {
-          workspaceId: user.id,
+          workspaceId,
           userId,
         },
       },
@@ -73,7 +79,7 @@ export async function POST(request: Request) {
 
     // Fetch inviter info for email
     const inviter = await prisma.user.findUnique({
-      where: { id: user.id },
+      where: { id: workspaceId },
       select: { name: true, email: true },
     });
 

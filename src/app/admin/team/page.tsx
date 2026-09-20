@@ -24,6 +24,7 @@ interface TeamMember {
   invitationToken?: string | null;
   createdAt: string;
   updatedAt: string;
+  isOwner?: boolean;
 }
 
 const PERMISSION_CONFIG: Partial<Record<
@@ -116,6 +117,15 @@ const PERMISSION_CONFIG: Partial<Record<
       </svg>
     ),
   },
+  tasks: {
+    label: "Task Manager",
+    description: "AI-powered task management, step decomposition, and tracking",
+    icon: (
+      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+    ),
+  },
   settings: {
     label: "Settings",
     description: "Application configuration and account security",
@@ -162,10 +172,12 @@ function setSectionLevel(
 function MemberPermissionsCell({
   member,
   grantedSections,
+  canManageTeam = false,
   onEditPermissions,
 }: {
   member: TeamMember;
   grantedSections: { key: SectionKey; level: PermissionLevel }[];
+  canManageTeam?: boolean;
   onEditPermissions: () => void;
 }) {
   const [open, setOpen] = useState(false);
@@ -364,21 +376,23 @@ function MemberPermissionsCell({
                 </div>
 
                 {/* Footer */}
-                <div className="p-2 bg-zinc-50/60 dark:bg-zinc-800/30 border-t border-zinc-200/80 dark:border-zinc-800 flex items-center justify-end">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setOpen(false);
-                      onEditPermissions();
-                    }}
-                    className="inline-flex items-center gap-1.5 text-xs font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 px-2 py-1 rounded-md hover:bg-blue-50 dark:hover:bg-blue-950/40 transition cursor-pointer"
-                  >
-                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
-                    </svg>
-                    <span>Edit Permissions</span>
-                  </button>
-                </div>
+                {canManageTeam && !member.isOwner && member.role !== "admin" && (
+                  <div className="p-2 bg-zinc-50/60 dark:bg-zinc-800/30 border-t border-zinc-200/80 dark:border-zinc-800 flex items-center justify-end">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setOpen(false);
+                        onEditPermissions();
+                      }}
+                      className="inline-flex items-center gap-1.5 text-xs font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 px-2 py-1 rounded-md hover:bg-blue-50 dark:hover:bg-blue-950/40 transition cursor-pointer"
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
+                      </svg>
+                      <span>Edit Permissions</span>
+                    </button>
+                  </div>
+                )}
               </div>,
               document.body
             )}
@@ -395,6 +409,7 @@ export default function TeamPage() {
   const [filterRole, setFilterRole] = useState<"all" | "active" | "pending" | "admin">("all");
   const [toast, setToast] = useState<{ type: "success" | "error"; message: string } | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [canManageTeam, setCanManageTeam] = useState(false);
 
   // Edit Permissions Modal State
   const [selectedMember, setSelectedMember] = useState<TeamMember | null>(null);
@@ -409,7 +424,6 @@ export default function TeamPage() {
   const [deletingMember, setDeletingMember] = useState<TeamMember | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
 
-
   const initialLoadDone = useRef(false);
 
   useEffect(() => {
@@ -418,13 +432,32 @@ export default function TeamPage() {
     return () => clearTimeout(t);
   }, [toast]);
 
+  // Check current user role
+  useEffect(() => {
+    fetch("/api/admin/auth/me")
+      .then((r) => r.json())
+      .then((d) => {
+        if (d?.authenticated && d?.user) {
+          setCanManageTeam(d.user.role === "admin");
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   useEffect(() => {
     let cancelled = false;
     if (initialLoadDone.current) setLoading(true);
     fetch("/api/admin/team")
       .then((r) => r.json())
       .then((data) => {
-        if (!cancelled) setMembers(data.members || []);
+        if (!cancelled) {
+          setMembers(data.members || []);
+          if (data.canManageTeam !== undefined) {
+            setCanManageTeam(Boolean(data.canManageTeam));
+          } else if (data.currentUserRole) {
+            setCanManageTeam(data.currentUserRole === "admin");
+          }
+        }
       })
       .catch(() => {
         if (!cancelled) setToast({ type: "error", message: "Failed to load team members" });
@@ -602,15 +635,17 @@ export default function TeamPage() {
             <span>Refresh</span>
           </button>
 
-          <Link
-            href="/admin/team/add"
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold transition-all duration-150 shadow-xs cursor-pointer active:scale-97 shrink-0"
-          >
-            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-            </svg>
-            Add Team Member
-          </Link>
+          {canManageTeam && (
+            <Link
+              href="/admin/team/add"
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold transition-all duration-150 shadow-xs cursor-pointer active:scale-97 shrink-0"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+              </svg>
+              Add Team Member
+            </Link>
+          )}
         </div>
       </div>
 
@@ -736,7 +771,7 @@ export default function TeamPage() {
             <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1 max-w-sm mx-auto">
               {search ? "Try adjusting your search query or filter" : "Get started by adding your first team member"}
             </p>
-            {!search && (
+            {!search && canManageTeam && (
               <div className="mt-4">
                 <Link
                   href="/admin/team/add"
@@ -764,7 +799,7 @@ export default function TeamPage() {
               </thead>
               <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800/60">
                 {filteredMembers.map((member) => {
-                  const isAdmin = member.role === "admin";
+                  const isAdmin = member.role === "admin" || Boolean(member.isOwner);
                   const avatarGradient = getAvatarColor(member.name);
                   const isPending = !isAdmin && !member.isActive;
 
@@ -789,7 +824,7 @@ export default function TeamPage() {
                               <span>{member.name}</span>
                               {isAdmin && (
                                 <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-purple-100 dark:bg-purple-950/80 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800/60 leading-none">
-                                  ADMIN
+                                  {member.isOwner ? "OWNER" : "ADMIN"}
                                 </span>
                               )}
                             </div>
@@ -812,7 +847,7 @@ export default function TeamPage() {
                             <svg className="w-3 h-3 text-purple-600 dark:text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                               <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
                             </svg>
-                            Super Admin
+                            {member.isOwner ? "Workspace Owner" : "Super Admin"}
                           </span>
                         ) : member.isActive ? (
                           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60">
@@ -857,6 +892,7 @@ export default function TeamPage() {
                           <MemberPermissionsCell
                             member={member}
                             grantedSections={grantedSections}
+                            canManageTeam={canManageTeam}
                             onEditPermissions={() => {
                               setSelectedMember(member);
                               setEditingPermissions(member.permissions);
@@ -868,7 +904,7 @@ export default function TeamPage() {
                       {/* Actions */}
                       <td className="px-6 py-4 text-right">
                         <div className="flex items-center justify-end gap-1.5 flex-wrap">
-                          {!isAdmin && (
+                          {canManageTeam && !isAdmin ? (
                             <>
                               {/* Edit Permissions Button */}
                               <button
@@ -936,6 +972,14 @@ export default function TeamPage() {
                                 </svg>
                               </button>
                             </>
+                          ) : isAdmin ? (
+                            <span className="text-xs text-zinc-400 dark:text-zinc-500 font-medium italic px-2 py-1">
+                              {member.isOwner ? "Workspace Owner" : "Administrator"}
+                            </span>
+                          ) : (
+                            <span className="text-xs text-zinc-400 dark:text-zinc-500 font-medium italic px-2 py-1">
+                              View Only
+                            </span>
                           )}
                         </div>
                       </td>

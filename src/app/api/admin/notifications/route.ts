@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getCurrentUser } from "@/lib/auth";
+import { getCurrentUser, getEffectiveWorkspaceAdminId } from "@/lib/auth";
 import { hasReadPermission } from "@/lib/permissions";
 
 export interface SystemNotification {
@@ -28,6 +28,8 @@ export async function GET() {
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  const workspaceId = getEffectiveWorkspaceAdminId(user);
 
   try {
     const now = new Date();
@@ -92,7 +94,10 @@ export async function GET() {
 
       // Instagram posts (last 7 days)
       prisma.instagramPostLog.findMany({
-        where: { createdAt: { gte: last7days } },
+        where: {
+          createdAt: { gte: last7days },
+          account: { userId: workspaceId },
+        },
         orderBy: { createdAt: "desc" },
         take: 5,
         select: {
@@ -118,6 +123,7 @@ export async function GET() {
 
       // Google Drive backup status
       prisma.googleAccount.findFirst({
+        where: { userId: workspaceId },
         select: {
           lastBackupAt: true,
           email: true,

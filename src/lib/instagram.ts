@@ -374,10 +374,11 @@ export async function handleInstagramCodeExchange(code: string, redirectUri: str
  * Fetch Media from Instagram Graph / Basic Display
  */
 export async function fetchInstagramMedia(instagramId: string, accessToken: string) {
-  const fullFields =
-    "id,caption,media_type,media_url,thumbnail_url,permalink,timestamp,username,like_count,comments_count,children{id,media_type,media_url}";
-  const basicFields =
-    "id,caption,media_type,media_url,thumbnail_url,permalink,timestamp,username";
+  const candidateFieldSets = [
+    "id,caption,media_type,media_url,thumbnail_url,permalink,timestamp,username,like_count,comments_count,children{id,media_type,media_url,thumbnail_url}",
+    "id,caption,media_type,media_url,thumbnail_url,permalink,timestamp,username,children{id,media_type,media_url,thumbnail_url}",
+    "id,caption,media_type,media_url,thumbnail_url,permalink,timestamp,username",
+  ];
 
   const isInstagramToken = accessToken.startsWith("IG");
   const endpoints = isInstagramToken
@@ -394,36 +395,58 @@ export async function fetchInstagramMedia(instagramId: string, accessToken: stri
       ];
 
   for (const endpoint of endpoints) {
-    // Attempt 1: Full fields
-    try {
-      const url = new URL(endpoint);
-      url.searchParams.set("fields", fullFields);
-      url.searchParams.set("limit", "50");
-      url.searchParams.set("access_token", accessToken);
+    for (const fields of candidateFieldSets) {
+      try {
+        const url = new URL(endpoint);
+        url.searchParams.set("fields", fields);
+        url.searchParams.set("limit", "50");
+        url.searchParams.set("access_token", accessToken);
 
-      const res = await fetch(url.toString(), { cache: "no-store" });
-      const data = await res.json();
-      if (res.ok && Array.isArray(data.data)) {
-        return { data: data.data, error: null };
-      }
-    } catch {}
-
-    // Attempt 2: Basic safe fields
-    try {
-      const url = new URL(endpoint);
-      url.searchParams.set("fields", basicFields);
-      url.searchParams.set("limit", "50");
-      url.searchParams.set("access_token", accessToken);
-
-      const res = await fetch(url.toString(), { cache: "no-store" });
-      const data = await res.json();
-      if (res.ok && Array.isArray(data.data)) {
-        return { data: data.data, error: null };
-      }
-    } catch {}
+        const res = await fetch(url.toString(), { cache: "no-store" });
+        const data = await res.json();
+        if (res.ok && Array.isArray(data.data)) {
+          return { data: data.data, error: null };
+        }
+      } catch {}
+    }
   }
 
   return { data: [], error: null };
+}
+
+/**
+ * Fetch Children of a Carousel Album from Instagram Graph API
+ */
+export async function fetchInstagramMediaChildren(
+  mediaId: string,
+  accessToken: string
+): Promise<{ id: string; media_type: string; media_url: string; thumbnail_url?: string }[]> {
+  const isInstagramToken = accessToken.startsWith("IG");
+  const endpoints = isInstagramToken
+    ? [
+        `https://graph.instagram.com/v19.0/${mediaId}/children`,
+        `https://graph.instagram.com/${mediaId}/children`,
+        `https://graph.facebook.com/v19.0/${mediaId}/children`,
+      ]
+    : [
+        `https://graph.facebook.com/v19.0/${mediaId}/children`,
+        `https://graph.instagram.com/v19.0/${mediaId}/children`,
+        `https://graph.instagram.com/${mediaId}/children`,
+      ];
+
+  for (const endpoint of endpoints) {
+    try {
+      const url = new URL(endpoint);
+      url.searchParams.set("fields", "id,media_type,media_url,thumbnail_url");
+      url.searchParams.set("access_token", accessToken);
+      const res = await fetch(url.toString(), { cache: "no-store" });
+      const data = await res.json();
+      if (res.ok && Array.isArray(data.data) && data.data.length > 0) {
+        return data.data;
+      }
+    } catch {}
+  }
+  return [];
 }
 
 /**

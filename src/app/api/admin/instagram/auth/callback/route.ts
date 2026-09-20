@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { logActivity } from "@/lib/activity";
+import { getCurrentUser, getEffectiveWorkspaceAdminId } from "@/lib/auth";
 import { handleInstagramCodeExchange, getInstagramConfig } from "@/lib/instagram";
 
 export async function GET(request: NextRequest) {
@@ -30,7 +31,8 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    let userId = "admin";
+    const user = await getCurrentUser();
+    let userId = user ? getEffectiveWorkspaceAdminId(user) : "admin";
     if (state) {
       try {
         const decoded = JSON.parse(Buffer.from(state, "base64").toString("utf-8"));

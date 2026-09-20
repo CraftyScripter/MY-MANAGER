@@ -1,8 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getCurrentUser } from "@/lib/auth";
+import { getCurrentUser, getEffectiveWorkspaceAdminId } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { logActivity } from "@/lib/activity";
-import { fetchInstagramMedia, publishInstagramMedia, fetchInstagramProfile } from "@/lib/instagram";
+import {
+  fetchInstagramMedia,
+  publishInstagramMedia,
+  fetchInstagramProfile,
+  fetchInstagramMediaChildren,
+} from "@/lib/instagram";
 
 export async function GET(request: NextRequest) {
   try {
@@ -13,10 +18,12 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const accountId = searchParams.get("accountId");
+    const mediaId = searchParams.get("mediaId");
 
+    const workspaceId = getEffectiveWorkspaceAdminId(user);
     const account = accountId
-      ? await prisma.instagramAccount.findUnique({ where: { id: accountId } })
-      : await prisma.instagramAccount.findFirst({ orderBy: { updatedAt: "desc" } });
+      ? await prisma.instagramAccount.findFirst({ where: { id: accountId, userId: workspaceId } })
+      : await prisma.instagramAccount.findFirst({ where: { userId: workspaceId }, orderBy: { updatedAt: "desc" } });
 
     if (!account) {
       return NextResponse.json({
@@ -26,6 +33,16 @@ export async function GET(request: NextRequest) {
         localLogs: [],
         total: 0,
         message: "No connected Instagram account found",
+      });
+    }
+
+    // If mediaId is specified, fetch children of that media item
+    if (mediaId) {
+      const children = await fetchInstagramMediaChildren(mediaId, account.accessToken);
+      return NextResponse.json({
+        success: true,
+        mediaId,
+        children,
       });
     }
 
@@ -89,19 +106,66 @@ export async function GET(request: NextRequest) {
       deletedLogs.map((p) => p.mediaId || p.id).filter(Boolean) as string[]
     );
 
+    // 0. Recover any posts stuck in "publishing" for more than 5 minutes (e.g. server crash)
+    await prisma.instagramPostLog.updateMany({
+      where: {
+        instagramAccountId: account.id,
+        status: "publishing",
+        updatedAt: { lt: new Date(Date.now() - 5 * 60 * 1000) },
+      },
+      data: {
+        status: "failed",
+      },
+    }).catch(() => {});
+
     // Auto-process any scheduled posts that have reached their scheduled time
     const dueScheduled = rawScheduled.filter(
       (p) => p.scheduledFor && new Date(p.scheduledFor).getTime() <= Date.now()
     );
 
     for (const due of dueScheduled) {
+      // 1. ATOMIC LOCK: Only ONE request can transition from "scheduled" to "publishing"
+      const claim = await prisma.instagramPostLog.updateMany({
+        where: {
+          id: due.id,
+          status: "scheduled",
+        },
+        data: {
+          status: "publishing",
+        },
+      });
+
+      if (claim.count === 0) {
+        // Already claimed by a concurrent worker/request! Skip!
+        continue;
+      }
+
       try {
+        const postUrls = (Array.isArray(due.mediaUrls) && due.mediaUrls.length > 0)
+          ? due.mediaUrls
+          : (() => {
+              try {
+                const parsed = JSON.parse(due.mediaUrl);
+                return Array.isArray(parsed) ? parsed : [due.mediaUrl];
+              } catch {
+                return [due.mediaUrl];
+              }
+            })();
+
+        const isCarousel = due.mediaType === "CAROUSEL" || postUrls.length > 1;
+        const targetMediaType = isCarousel
+          ? "CAROUSEL"
+          : due.mediaType === "VIDEO" || due.mediaType === "REELS"
+          ? "VIDEO"
+          : "IMAGE";
+
         const publishRes = await publishInstagramMedia({
           instagramId: account.instagramId,
           accessToken: account.accessToken,
-          mediaUrl: due.mediaUrl,
+          mediaUrl: postUrls[0] || due.mediaUrl,
+          mediaUrls: postUrls,
           caption: due.caption || "",
-          mediaType: due.mediaType === "VIDEO" ? "VIDEO" : "IMAGE",
+          mediaType: targetMediaType,
         });
 
         if (publishRes.mediaId) {
@@ -115,15 +179,26 @@ export async function GET(request: NextRequest) {
             },
           });
           publishedLogs.unshift(updated);
+        } else {
+          await prisma.instagramPostLog.update({
+            where: { id: due.id },
+            data: { status: "failed" },
+          }).catch(() => {});
         }
       } catch (err) {
         console.error("Failed to auto-publish scheduled post:", err);
+        await prisma.instagramPostLog.update({
+          where: { id: due.id },
+          data: { status: "failed" },
+        }).catch(() => {});
       }
     }
 
     // Refresh remaining pending scheduled posts
-    const activeScheduledPosts = rawScheduled.filter(
-      (p) => !p.scheduledFor || new Date(p.scheduledFor).getTime() > Date.now()
+    const activeScheduledPosts = allLocalLogs.filter(
+      (p) =>
+        (p.status === "scheduled" && (!p.scheduledFor || new Date(p.scheduledFor).getTime() > Date.now())) ||
+        p.status === "publishing"
     );
 
     // All live posts returned by Instagram Graph API are active and must be visible
@@ -142,41 +217,110 @@ export async function GET(request: NextRequest) {
     // Merge any locally published posts that might still be propagating to Instagram's feed
     for (const log of publishedLogs) {
       if (log.mediaId && !liveMediaIds.has(log.mediaId)) {
+        const publishedAgeMs = Date.now() - new Date(log.publishedAt || log.createdAt).getTime();
+
+        // If post was published more than 2 minutes ago and is not in live feed, it was deleted on Instagram
+        if (publishedAgeMs > 120000) {
+          prisma.instagramPostLog.update({
+            where: { id: log.id },
+            data: { status: "deleted" },
+          }).catch(() => {});
+          continue;
+        }
+
+        // If published within the last 2 minutes, check if it actually exists on Instagram (still propagating)
+        let stillExists = false;
+        try {
+          const isInstagramToken = account.accessToken.startsWith("IG");
+          const checkEndpoints = isInstagramToken
+            ? [
+                `https://graph.instagram.com/v19.0/${log.mediaId}`,
+                `https://graph.instagram.com/${log.mediaId}`,
+              ]
+            : [
+                `https://graph.facebook.com/v19.0/${log.mediaId}`,
+                `https://graph.instagram.com/v19.0/${log.mediaId}`,
+              ];
+
+          for (const ep of checkEndpoints) {
+            const checkUrl = new URL(ep);
+            checkUrl.searchParams.set("fields", "id");
+            checkUrl.searchParams.set("access_token", account.accessToken);
+            const checkRes = await fetch(checkUrl.toString(), { cache: "no-store" });
+            const checkData = await checkRes.json().catch(() => ({}));
+            if (checkRes.ok && checkData.id) {
+              stillExists = true;
+              break;
+            }
+          }
+        } catch {}
+
+        if (!stillExists) {
+          // Object does not exist on Instagram -> marked as deleted
+          prisma.instagramPostLog.update({
+            where: { id: log.id },
+            data: { status: "deleted" },
+          }).catch(() => {});
+          continue;
+        }
+
+        const postUrls = (Array.isArray(log.mediaUrls) && log.mediaUrls.length > 0)
+          ? log.mediaUrls
+          : [log.mediaUrl];
+
+        const isCarousel = log.mediaType === "CAROUSEL" || postUrls.length > 1;
+
         mergedPosts.unshift({
           id: log.mediaId,
           caption: log.caption || undefined,
-          media_type: log.mediaType === "VIDEO" ? "VIDEO" : "IMAGE",
+          media_type: isCarousel ? "CAROUSEL_ALBUM" : log.mediaType === "VIDEO" ? "VIDEO" : "IMAGE",
           media_url: log.mediaUrl,
           thumbnail_url: log.mediaUrl,
           permalink: log.permalink || undefined,
           timestamp: (log.publishedAt || log.createdAt).toISOString(),
           like_count: 0,
           comments_count: 0,
+          children: isCarousel && postUrls.length > 0 ? {
+            data: postUrls.map((u, idx) => ({
+              id: `${log.mediaId}_${idx}`,
+              media_type: u.match(/\.(mp4|mov|webm)$/i) ? "VIDEO" : "IMAGE",
+              media_url: u,
+            })),
+          } : undefined,
         });
       }
     }
 
-    return NextResponse.json({
-      account: {
-        id: account.id,
-        instagramId: account.instagramId,
-        username,
-        name,
-        profilePictureUrl,
-        accountType,
-        biography,
-        website,
-        followersCount,
-        followsCount,
-        mediaCount: typeof mediaCount === "number" ? mediaCount : mergedPosts.length,
-        pageName: account.pageName,
+    return NextResponse.json(
+      {
+        account: {
+          id: account.id,
+          instagramId: account.instagramId,
+          username,
+          name,
+          profilePictureUrl,
+          accountType,
+          biography,
+          website,
+          followersCount,
+          followsCount,
+          mediaCount: typeof mediaCount === "number" ? mediaCount : mergedPosts.length,
+          pageName: account.pageName,
+        },
+        posts: mergedPosts,
+        scheduledPosts: activeScheduledPosts,
+        localLogs: allLocalLogs,
+        fetchError,
+        total: mergedPosts.length,
       },
-      posts: mergedPosts,
-      scheduledPosts: activeScheduledPosts,
-      localLogs: allLocalLogs,
-      fetchError,
-      total: mergedPosts.length,
-    });
+      {
+        headers: {
+          "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+          Pragma: "no-cache",
+          Expires: "0",
+        },
+      }
+    );
   } catch (error: any) {
     console.error("Failed to retrieve Instagram posts:", error);
     return NextResponse.json(
@@ -206,9 +350,10 @@ export async function POST(request: NextRequest) {
       postId,
     } = body;
 
+    const workspaceId = getEffectiveWorkspaceAdminId(user);
     const account = accountId
-      ? await prisma.instagramAccount.findUnique({ where: { id: accountId } })
-      : await prisma.instagramAccount.findFirst({ orderBy: { updatedAt: "desc" } });
+      ? await prisma.instagramAccount.findFirst({ where: { id: accountId, userId: workspaceId } })
+      : await prisma.instagramAccount.findFirst({ where: { userId: workspaceId }, orderBy: { updatedAt: "desc" } });
 
     if (!account) {
       return NextResponse.json(
@@ -219,38 +364,84 @@ export async function POST(request: NextRequest) {
 
     // Action: Publish a scheduled post right now
     if (action === "publish_now" && postId) {
-      const scheduledLog = await prisma.instagramPostLog.findUnique({
-        where: { id: postId },
+      // 1. ATOMIC CLAIM: Only ONE request can transition from "scheduled" to "publishing"
+      const claim = await prisma.instagramPostLog.updateMany({
+        where: {
+          id: postId,
+          status: "scheduled",
+          instagramAccountId: account.id,
+        },
+        data: {
+          status: "publishing",
+        },
+      });
+
+      if (claim.count === 0) {
+        return NextResponse.json(
+          { error: "This post is already being published or is no longer in the scheduled queue." },
+          { status: 409 }
+        );
+      }
+
+      const scheduledLog = await prisma.instagramPostLog.findFirst({
+        where: { id: postId, instagramAccountId: account.id },
       });
 
       if (!scheduledLog) {
         return NextResponse.json({ error: "Scheduled post not found" }, { status: 404 });
       }
 
-      const { mediaId, permalink } = await publishInstagramMedia({
-        instagramId: account.instagramId,
-        accessToken: account.accessToken,
-        mediaUrl: scheduledLog.mediaUrl,
-        caption: scheduledLog.caption || null,
-        mediaType: scheduledLog.mediaType === "VIDEO" ? "VIDEO" : "IMAGE",
-      });
+      try {
+        const postUrls = (Array.isArray(scheduledLog.mediaUrls) && scheduledLog.mediaUrls.length > 0)
+          ? scheduledLog.mediaUrls
+          : (() => {
+              try {
+                const parsed = JSON.parse(scheduledLog.mediaUrl);
+                return Array.isArray(parsed) ? parsed : [scheduledLog.mediaUrl];
+              } catch {
+                return [scheduledLog.mediaUrl];
+              }
+            })();
 
-      const updatedLog = await prisma.instagramPostLog.update({
-        where: { id: postId },
-        data: {
-          status: "published",
-          mediaId,
-          permalink: permalink || null,
-          publishedAt: new Date(),
-        },
-      });
+        const isCarousel = scheduledLog.mediaType === "CAROUSEL" || postUrls.length > 1;
+        const targetMediaType = isCarousel
+          ? "CAROUSEL"
+          : scheduledLog.mediaType === "VIDEO" || scheduledLog.mediaType === "REELS"
+          ? "VIDEO"
+          : "IMAGE";
 
-      return NextResponse.json({
-        success: true,
-        message: "Scheduled post successfully published to Instagram!",
-        postLog: updatedLog,
-        permalink,
-      });
+        const { mediaId, permalink } = await publishInstagramMedia({
+          instagramId: account.instagramId,
+          accessToken: account.accessToken,
+          mediaUrl: postUrls[0] || scheduledLog.mediaUrl,
+          mediaUrls: postUrls,
+          caption: scheduledLog.caption || null,
+          mediaType: targetMediaType,
+        });
+
+        const updatedLog = await prisma.instagramPostLog.update({
+          where: { id: postId },
+          data: {
+            status: "published",
+            mediaId,
+            permalink: permalink || null,
+            publishedAt: new Date(),
+          },
+        });
+
+        return NextResponse.json({
+          success: true,
+          message: "Scheduled post successfully published to Instagram!",
+          postLog: updatedLog,
+          permalink,
+        });
+      } catch (publishErr: any) {
+        await prisma.instagramPostLog.update({
+          where: { id: postId },
+          data: { status: "failed" },
+        }).catch(() => {});
+        throw publishErr;
+      }
     }
 
     const targetUrls = Array.isArray(mediaUrls) && mediaUrls.length > 0 ? mediaUrls : [mediaUrl || ""];
@@ -285,17 +476,38 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      const postLog = await prisma.instagramPostLog.create({
-        data: {
-          instagramAccountId: account.id,
-          caption: caption || null,
-          mediaUrl: primaryUrl,
-          mediaType: finalMediaType,
-          status: "scheduled",
-          scheduledFor: scheduledDate,
-          publishedBy: user.email,
-        },
-      });
+      let postLog: any;
+      try {
+        postLog = await prisma.instagramPostLog.create({
+          data: {
+            instagramAccountId: account.id,
+            caption: caption || null,
+            mediaUrl: primaryUrl,
+            mediaUrls: targetUrls,
+            mediaType: finalMediaType,
+            status: "scheduled",
+            scheduledFor: scheduledDate,
+            publishedBy: user.email,
+          },
+        });
+      } catch (createErr: any) {
+        if (createErr?.message?.includes("mediaUrls")) {
+          // Fallback if running server has stale Prisma client in memory
+          postLog = await prisma.instagramPostLog.create({
+            data: {
+              instagramAccountId: account.id,
+              caption: caption || null,
+              mediaUrl: targetUrls.length > 1 ? JSON.stringify(targetUrls) : primaryUrl,
+              mediaType: finalMediaType,
+              status: "scheduled",
+              scheduledFor: scheduledDate,
+              publishedBy: user.email,
+            },
+          });
+        } else {
+          throw createErr;
+        }
+      }
 
       await logActivity({
         action: "INSTAGRAM_POST_SCHEDULED",
@@ -323,19 +535,41 @@ export async function POST(request: NextRequest) {
       mediaType: finalMediaType,
     });
 
-    const postLog = await prisma.instagramPostLog.create({
-      data: {
-        instagramAccountId: account.id,
-        mediaId: publishedMediaId,
-        caption: caption || null,
-        mediaUrl: primaryUrl,
-        mediaType: finalMediaType,
-        permalink: permalink || null,
-        status: "published",
-        publishedBy: user.email,
-        publishedAt: new Date(),
-      },
-    });
+    let postLog: any;
+    try {
+      postLog = await prisma.instagramPostLog.create({
+        data: {
+          instagramAccountId: account.id,
+          mediaId: publishedMediaId,
+          caption: caption || null,
+          mediaUrl: primaryUrl,
+          mediaUrls: targetUrls,
+          mediaType: finalMediaType,
+          permalink: permalink || null,
+          status: "published",
+          publishedBy: user.email,
+          publishedAt: new Date(),
+        },
+      });
+    } catch (createErr: any) {
+      if (createErr?.message?.includes("mediaUrls")) {
+        postLog = await prisma.instagramPostLog.create({
+          data: {
+            instagramAccountId: account.id,
+            mediaId: publishedMediaId,
+            caption: caption || null,
+            mediaUrl: targetUrls.length > 1 ? JSON.stringify(targetUrls) : primaryUrl,
+            mediaType: finalMediaType,
+            permalink: permalink || null,
+            status: "published",
+            publishedBy: user.email,
+            publishedAt: new Date(),
+          },
+        });
+      } else {
+        throw createErr;
+      }
+    }
 
     await logActivity({
       action: "INSTAGRAM_POST_PUBLISHED",
@@ -380,19 +614,22 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: "Post ID is required" }, { status: 400 });
     }
 
-    // 1. Check if there's a local post log matching by id or mediaId
+    const workspaceId = getEffectiveWorkspaceAdminId(user);
+
+    // 1. Check if there's a local post log matching by id or mediaId within this workspace
     const localLog = await prisma.instagramPostLog.findFirst({
       where: {
         OR: [{ id }, { mediaId: id }],
+        account: { userId: workspaceId },
       },
     });
 
     // 2. Identify the connected Instagram account
     const account = accountId
-      ? await prisma.instagramAccount.findUnique({ where: { id: accountId } })
+      ? await prisma.instagramAccount.findFirst({ where: { id: accountId, userId: workspaceId } })
       : localLog
-      ? await prisma.instagramAccount.findUnique({ where: { id: localLog.instagramAccountId } })
-      : await prisma.instagramAccount.findFirst({ orderBy: { updatedAt: "desc" } });
+      ? await prisma.instagramAccount.findFirst({ where: { id: localLog.instagramAccountId, userId: workspaceId } })
+      : await prisma.instagramAccount.findFirst({ where: { userId: workspaceId }, orderBy: { updatedAt: "desc" } });
 
     const targetMediaId = localLog?.mediaId || id;
     const permalink = localLog?.permalink || null;

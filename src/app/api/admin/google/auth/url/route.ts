@@ -5,7 +5,7 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const state = searchParams.get("state") || "admin";
-    const prompt = searchParams.get("prompt") || "select_account";
+    const prompt = searchParams.get("prompt") || "consent select_account";
 
     const clientId = getGoogleClientId();
     if (!clientId) {

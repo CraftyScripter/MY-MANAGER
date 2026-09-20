@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { uploadReceipt } from "@/lib/cloudinary";
 import { uploadToAdminDrive } from "@/lib/googleDriveService";
-import { getCurrentUser, checkPermission } from "@/lib/auth";
+import { getCurrentUser, checkPermission, getEffectiveWorkspaceAdminId } from "@/lib/auth";
 
 const MAX_FILE_SIZE = 15 * 1024 * 1024;
 const ALLOWED_TYPES = [
@@ -40,6 +40,7 @@ export async function POST(request: Request) {
     }
 
     const buffer = Buffer.from(await file.arrayBuffer());
+    const workspaceId = getEffectiveWorkspaceAdminId(user);
 
     // 1. Try uploading directly to Workspace Admin's Google Drive
     try {
@@ -49,6 +50,7 @@ export async function POST(request: Request) {
         buffer,
         folderCategory: "finance",
         makePublicReadable: true,
+        preferredUserId: workspaceId,
       });
 
       return NextResponse.json({

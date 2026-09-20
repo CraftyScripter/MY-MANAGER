@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getCurrentUser } from "@/lib/auth";
+import { getCurrentUser, getEffectiveWorkspaceAdminId } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { logActivity } from "@/lib/activity";
 import { fetchInstagramProfile } from "@/lib/instagram";
@@ -11,12 +11,15 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const workspaceId = getEffectiveWorkspaceAdminId(user);
+
     const metaConfigured = Boolean(
       (process.env.INSTAGRAM_APP_ID && process.env.INSTAGRAM_APP_SECRET) ||
       (process.env.META_APP_ID && process.env.META_APP_SECRET)
     );
 
     const accounts = await prisma.instagramAccount.findMany({
+      where: { userId: workspaceId },
       orderBy: { updatedAt: "desc" },
     });
 
@@ -99,6 +102,7 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const workspaceId = getEffectiveWorkspaceAdminId(user);
     const { searchParams } = new URL(request.url);
     const id = searchParams.get("id");
 
@@ -106,16 +110,16 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: "Account ID is required" }, { status: 400 });
     }
 
-    const account = await prisma.instagramAccount.findUnique({
-      where: { id },
+    const account = await prisma.instagramAccount.findFirst({
+      where: { id, userId: workspaceId },
     });
 
     if (!account) {
-      return NextResponse.json({ error: "Account not found" }, { status: 404 });
+      return NextResponse.json({ error: "Account not found or access denied" }, { status: 404 });
     }
 
     await prisma.instagramAccount.delete({
-      where: { id },
+      where: { id: account.id },
     });
 
     await logActivity({
@@ -135,3 +139,4 @@ export async function DELETE(request: NextRequest) {
     );
   }
 }
+

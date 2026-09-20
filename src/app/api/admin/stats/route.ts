@@ -1,12 +1,14 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getCurrentUser, checkPermission } from "@/lib/auth";
+import { getCurrentUser, checkPermission, getEffectiveWorkspaceAdminId } from "@/lib/auth";
 
 export async function GET() {
   const user = await getCurrentUser();
   if (!user || !checkPermission(user, "dashboard")) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
+
+  const workspaceId = getEffectiveWorkspaceAdminId(user);
 
   try {
     const [
@@ -59,11 +61,25 @@ export async function GET() {
         orderBy: { createdAt: "desc" },
       }),
       prisma.instagramAccount.findMany({
+        where: { userId: workspaceId },
         select: { id: true, username: true, followersCount: true, followsCount: true, mediaCount: true },
       }),
-      prisma.instagramPostLog.count({ where: { status: "published" } }),
-      prisma.instagramPostLog.count({ where: { status: "scheduled" } }),
+      prisma.instagramPostLog.count({
+        where: {
+          status: "published",
+          account: { userId: workspaceId },
+        },
+      }),
+      prisma.instagramPostLog.count({
+        where: {
+          status: "scheduled",
+          account: { userId: workspaceId },
+        },
+      }),
       prisma.instagramPostLog.findMany({
+        where: {
+          account: { userId: workspaceId },
+        },
         take: 5,
         orderBy: { createdAt: "desc" },
         select: { id: true, caption: true, mediaUrl: true, mediaType: true, status: true, createdAt: true },

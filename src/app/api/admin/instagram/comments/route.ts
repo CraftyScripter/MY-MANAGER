@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getCurrentUser } from "@/lib/auth";
+import { getCurrentUser, getEffectiveWorkspaceAdminId } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import {
   fetchInstagramComments,
@@ -23,9 +23,10 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Media ID is required" }, { status: 400 });
     }
 
+    const workspaceId = getEffectiveWorkspaceAdminId(user);
     const account = accountId
-      ? await prisma.instagramAccount.findUnique({ where: { id: accountId } })
-      : await prisma.instagramAccount.findFirst({ orderBy: { updatedAt: "desc" } });
+      ? await prisma.instagramAccount.findFirst({ where: { id: accountId, userId: workspaceId } })
+      : await prisma.instagramAccount.findFirst({ where: { userId: workspaceId }, orderBy: { updatedAt: "desc" } });
 
     if (!account) {
       return NextResponse.json({ error: "No connected Instagram account found" }, { status: 404 });
@@ -59,9 +60,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const workspaceId = getEffectiveWorkspaceAdminId(user);
     const account = accountId
-      ? await prisma.instagramAccount.findUnique({ where: { id: accountId } })
-      : await prisma.instagramAccount.findFirst({ orderBy: { updatedAt: "desc" } });
+      ? await prisma.instagramAccount.findFirst({ where: { id: accountId, userId: workspaceId } })
+      : await prisma.instagramAccount.findFirst({ where: { userId: workspaceId }, orderBy: { updatedAt: "desc" } });
 
     if (!account) {
       return NextResponse.json({ error: "No connected Instagram account found" }, { status: 404 });
@@ -99,9 +101,10 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: "Comment ID is required" }, { status: 400 });
     }
 
+    const workspaceId = getEffectiveWorkspaceAdminId(user);
     const account = accountId
-      ? await prisma.instagramAccount.findUnique({ where: { id: accountId } })
-      : await prisma.instagramAccount.findFirst({ orderBy: { updatedAt: "desc" } });
+      ? await prisma.instagramAccount.findFirst({ where: { id: accountId, userId: workspaceId } })
+      : await prisma.instagramAccount.findFirst({ where: { userId: workspaceId }, orderBy: { updatedAt: "desc" } });
 
     if (!account) {
       return NextResponse.json({ error: "No connected Instagram account found" }, { status: 404 });
@@ -132,9 +135,10 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: "Comment ID is required" }, { status: 400 });
     }
 
+    const workspaceId = getEffectiveWorkspaceAdminId(user);
     const account = accountId
-      ? await prisma.instagramAccount.findUnique({ where: { id: accountId } })
-      : await prisma.instagramAccount.findFirst({ orderBy: { updatedAt: "desc" } });
+      ? await prisma.instagramAccount.findFirst({ where: { id: accountId, userId: workspaceId } })
+      : await prisma.instagramAccount.findFirst({ where: { userId: workspaceId }, orderBy: { updatedAt: "desc" } });
 
     if (!account) {
       return NextResponse.json({ error: "No connected Instagram account found" }, { status: 404 });

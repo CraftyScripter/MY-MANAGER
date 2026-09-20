@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getCurrentUser } from "@/lib/auth";
+import { getCurrentUser, getEffectiveWorkspaceAdminId } from "@/lib/auth";
 import { getInstagramConfig, getDirectInstagramAuthUrl, getMetaAuthUrl } from "@/lib/instagram";
 
 export async function GET(request: NextRequest) {
@@ -23,10 +23,12 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    const workspaceId = getEffectiveWorkspaceAdminId(user);
+
     // State with user info
     const statePayload = Buffer.from(
       JSON.stringify({
-        userId: user.id,
+        userId: workspaceId,
         timestamp: Date.now(),
       })
     ).toString("base64");

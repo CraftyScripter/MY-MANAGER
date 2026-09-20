@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, Suspense } from "react";
+import { useState, useEffect, useRef, Suspense, useMemo } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import DropdownSelect from "@/components/DropdownSelect";
 
@@ -38,6 +38,7 @@ interface LocalPostLog {
   mediaId?: string | null;
   caption?: string | null;
   mediaUrl: string;
+  mediaUrls?: string[];
   mediaType: string;
   permalink?: string | null;
   status: string;
@@ -111,6 +112,16 @@ function InstagramContent() {
   const [submitting, setSubmitting] = useState(false);
   const [dragActive, setDragActive] = useState(false);
   const [previewSlideIdx, setPreviewSlideIdx] = useState(0);
+  const [uploadedMediaItems, setUploadedMediaItems] = useState<{
+    id: string;
+    name: string;
+    size: number;
+    type: "IMAGE" | "VIDEO";
+    previewUrl: string;
+    serverUrl?: string;
+    isUploading?: boolean;
+    error?: string | null;
+  }[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Detail & Comments Modal
@@ -122,6 +133,9 @@ function InstagramContent() {
   const [replyToCommentId, setReplyToCommentId] = useState<string | null>(null);
   const [submittingComment, setSubmittingComment] = useState(false);
   const [publishingScheduledId, setPublishingScheduledId] = useState<string | null>(null);
+  const [viewingCarouselIndex, setViewingCarouselIndex] = useState(0);
+  const [loadingCarouselChildren, setLoadingCarouselChildren] = useState(false);
+  const [touchStartX, setTouchStartX] = useState<number | null>(null);
 
   // Toast
   const [toast, setToast] = useState<{ type: "success" | "error" | "info"; message: string } | null>(null);
@@ -206,12 +220,21 @@ function InstagramContent() {
   // Fetch Posts for selected account
   const fetchPosts = async (accId?: string, silent = false) => {
     const targetId = accId || selectedAccountId;
+    if (!targetId && !currentAccount) return;
+
     if (!silent) setLoadingPosts(true);
     try {
+      const timestamp = Date.now();
       const url = targetId
-        ? `/api/admin/instagram/posts?accountId=${targetId}`
-        : "/api/admin/instagram/posts";
-      const res = await fetch(url, { cache: "no-store" });
+        ? `/api/admin/instagram/posts?accountId=${targetId}&_t=${timestamp}`
+        : `/api/admin/instagram/posts?_t=${timestamp}`;
+      const res = await fetch(url, {
+        cache: "no-store",
+        headers: {
+          "Cache-Control": "no-cache, no-store, must-revalidate",
+          Pragma: "no-cache",
+        },
+      });
       const data = await res.json();
 
       if (res.ok) {
@@ -239,21 +262,28 @@ function InstagramContent() {
     }
   }, [selectedAccountId]);
 
-  // Auto-sync live feed & stats in background (Buffer-like real-time updates)
+  // Auto-sync live feed & stats in background (Real-time updates on focus/visibility and fast 15s polling)
   useEffect(() => {
     if (!selectedAccountId) return;
 
-    const handleFocus = () => {
-      fetchPosts(selectedAccountId, true);
+    const handleSync = () => {
+      if (document.visibilityState === "visible") {
+        fetchPosts(selectedAccountId, true);
+      }
     };
 
-    window.addEventListener("focus", handleFocus);
+    window.addEventListener("focus", handleSync);
+    document.addEventListener("visibilitychange", handleSync);
+
     const interval = setInterval(() => {
-      fetchPosts(selectedAccountId, true);
-    }, 45000); // Poll every 45s
+      if (document.visibilityState === "visible") {
+        fetchPosts(selectedAccountId, true);
+      }
+    }, 15000); // Fast realtime poll every 15s when active
 
     return () => {
-      window.removeEventListener("focus", handleFocus);
+      window.removeEventListener("focus", handleSync);
+      document.removeEventListener("visibilitychange", handleSync);
       clearInterval(interval);
     };
   }, [selectedAccountId]);
@@ -403,46 +433,94 @@ function InstagramContent() {
     }
   };
 
-  // Process File Upload
+  // Process File Upload with Instant Local Preview & Server Upload
   const processUploadedFiles = async (files: FileList | File[]) => {
     const fileArray = Array.from(files);
     if (fileArray.length === 0) return;
 
+    // 1. Create immediate local object URLs for 0ms instant preview
+    const newItems = fileArray.map((file) => {
+      const isVideo = file.type.startsWith("video/") || Boolean(file.name.match(/\.(mp4|mov|webm)$/i));
+      return {
+        id: `${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
+        name: file.name,
+        size: file.size,
+        type: (isVideo ? "VIDEO" : "IMAGE") as "IMAGE" | "VIDEO",
+        previewUrl: URL.createObjectURL(file),
+        isUploading: true,
+      };
+    });
+
+    if (postMediaType === "CAROUSEL" || fileArray.length > 1) {
+      setPostMediaType("CAROUSEL");
+      setUploadedMediaItems((prev) => [...prev, ...newItems]);
+      const newUrls = newItems.map((it) => it.previewUrl);
+      setCarouselUrls((prev) => {
+        const combined = [...prev, ...newUrls];
+        if (!mediaUrlInput && combined.length > 0) {
+          setMediaUrlInput(combined[0]);
+        }
+        return combined;
+      });
+    } else {
+      const single = newItems[0];
+      setPostMediaType(single.type === "VIDEO" ? "VIDEO" : "IMAGE");
+      setUploadedMediaItems([single]);
+      setMediaUrlInput(single.previewUrl);
+      setCarouselUrls([single.previewUrl]);
+    }
+
     setUploadingMedia(true);
+
+    // 2. Upload to server in background
     try {
-      const uploadedUrls: string[] = [];
-      for (const file of fileArray) {
+      for (let i = 0; i < fileArray.length; i++) {
+        const file = fileArray[i];
+        const item = newItems[i];
+
         const formData = new FormData();
         formData.append("file", file);
 
-        const res = await fetch("/api/admin/instagram/upload", {
-          method: "POST",
-          body: formData,
-        });
-        const data = await res.json();
-        if (res.ok && data.url) {
-          uploadedUrls.push(data.url);
+        try {
+          const res = await fetch("/api/admin/instagram/upload", {
+            method: "POST",
+            body: formData,
+          });
+          const data = await res.json();
+
+          if (!res.ok || !data.url) {
+            throw new Error(data.error || "Failed to upload file");
+          }
+
+          const serverUrl = data.url;
+
+          setUploadedMediaItems((prev) =>
+            prev.map((it) =>
+              it.id === item.id ? { ...it, isUploading: false, serverUrl } : it
+            )
+          );
+
+          setCarouselUrls((prev) =>
+            prev.map((u) => (u === item.previewUrl ? serverUrl : u))
+          );
+          setMediaUrlInput((prev) => (prev === item.previewUrl ? serverUrl : prev));
+        } catch (uploadErr: any) {
+          console.error("File upload error:", uploadErr);
+          setUploadedMediaItems((prev) =>
+            prev.map((it) =>
+              it.id === item.id
+                ? { ...it, isUploading: false, error: uploadErr.message || "Upload failed" }
+                : it
+            )
+          );
+          setToast({
+            type: "error",
+            message: `Upload failed for ${file.name}: ${uploadErr.message || "Error"}`,
+          });
         }
       }
 
-      if (uploadedUrls.length > 1) {
-        setPostMediaType("CAROUSEL");
-        setCarouselUrls((prev) => [...prev, ...uploadedUrls]);
-        setMediaUrlInput(uploadedUrls[0]);
-        setToast({ type: "success", message: `Uploaded ${uploadedUrls.length} files for carousel!` });
-      } else if (uploadedUrls.length === 1) {
-        const singleUrl = uploadedUrls[0];
-        const isVideo = fileArray[0].type.startsWith("video/");
-        if (postMediaType === "CAROUSEL") {
-          setCarouselUrls((prev) => [...prev, singleUrl]);
-        } else {
-          setPostMediaType(isVideo ? "VIDEO" : "IMAGE");
-          setMediaUrlInput(singleUrl);
-        }
-        setToast({ type: "success", message: "Media uploaded successfully!" });
-      }
-    } catch {
-      setToast({ type: "error", message: "Error uploading media file(s)" });
+      setToast({ type: "success", message: "Media preview ready!" });
     } finally {
       setUploadingMedia(false);
     }
@@ -471,14 +549,50 @@ function InstagramContent() {
     }
   };
 
+  // Remove single media item
+  const handleRemoveSingleMedia = () => {
+    setMediaUrlInput("");
+    setCarouselUrls([]);
+    setUploadedMediaItems([]);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  // Remove carousel slide item
+  const handleRemoveCarouselItem = (index: number) => {
+    setCarouselUrls((prev) => {
+      const next = prev.filter((_, i) => i !== index);
+      if (previewSlideIdx >= next.length) {
+        setPreviewSlideIdx(Math.max(0, next.length - 1));
+      }
+      if (next.length === 0) setMediaUrlInput("");
+      else setMediaUrlInput(next[0]);
+      return next;
+    });
+    setUploadedMediaItems((prev) => prev.filter((_, i) => i !== index));
+  };
+
   // Handle Submit (Publish Now OR Schedule)
   const handleSubmitPost = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (uploadingMedia) {
+      setToast({ type: "info", message: "Please wait for media upload to finish before publishing." });
+      return;
+    }
+
     const effectiveUrls =
       postMediaType === "CAROUSEL"
-        ? carouselUrls.filter(Boolean)
+        ? carouselUrls
+            .map((u) => {
+              const match = uploadedMediaItems.find((it) => it.previewUrl === u);
+              return match?.serverUrl || u;
+            })
+            .filter(Boolean)
         : mediaUrlInput.trim()
-        ? [mediaUrlInput.trim()]
+        ? [
+            uploadedMediaItems.find((it) => it.previewUrl === mediaUrlInput.trim())?.serverUrl ||
+              mediaUrlInput.trim(),
+          ]
         : [];
 
     if (effectiveUrls.length === 0) {
@@ -519,6 +633,7 @@ function InstagramContent() {
         setShowCreateModal(false);
         setMediaUrlInput("");
         setCarouselUrls([]);
+        setUploadedMediaItems([]);
         setCaptionInput("");
         setIsScheduleMode(false);
         setScheduleDateTime("");
@@ -536,21 +651,27 @@ function InstagramContent() {
     }
   };
 
+
   // Fetch comments when viewing a post
   const fetchComments = async (mediaId: string, silent = false) => {
     if (!silent) setLoadingComments(true);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 6000);
     try {
       const res = await fetch(
         `/api/admin/instagram/comments?mediaId=${mediaId}&accountId=${selectedAccountId}`,
-        { cache: "no-store" }
+        { cache: "no-store", signal: controller.signal }
       );
       const data = await res.json();
       if (res.ok && Array.isArray(data.comments)) {
         setPostComments(data.comments);
+      } else {
+        if (!silent) setPostComments([]);
       }
     } catch {
       if (!silent) setPostComments([]);
     } finally {
+      clearTimeout(timeoutId);
       if (!silent) setLoadingComments(false);
     }
   };
@@ -564,13 +685,77 @@ function InstagramContent() {
     return () => clearInterval(interval);
   }, [viewingPost?.id, selectedAccountId]);
 
-  const handleOpenPostDetail = (post: InstagramPost) => {
+  const handleOpenPostDetail = async (post: InstagramPost) => {
     setViewingPost(post);
+    setViewingCarouselIndex(0);
     setPostComments([]);
     setReplyToCommentId(null);
     setNewCommentText("");
     fetchComments(post.id);
+
+    // If post is a carousel and children are not loaded yet, fetch them from the API
+    if (
+      post.media_type === "CAROUSEL_ALBUM" &&
+      (!post.children?.data || post.children.data.length === 0)
+    ) {
+      setLoadingCarouselChildren(true);
+      try {
+        const res = await fetch(
+          `/api/admin/instagram/posts?mediaId=${post.id}&accountId=${selectedAccountId}`
+        );
+        const data = await res.json();
+        if (res.ok && Array.isArray(data.children) && data.children.length > 0) {
+          setViewingPost((prev) =>
+            prev && prev.id === post.id
+              ? { ...prev, children: { data: data.children } }
+              : prev
+          );
+        }
+      } catch (err) {
+        console.error("Failed to fetch carousel children:", err);
+      } finally {
+        setLoadingCarouselChildren(false);
+      }
+    }
   };
+
+  // Resolved media items for the currently viewed post
+  const currentPostMediaItems: Array<{
+    id: string;
+    media_type: string;
+    media_url: string;
+    thumbnail_url?: string;
+  }> = useMemo(() => {
+    if (!viewingPost) return [];
+    if (viewingPost.children?.data && viewingPost.children.data.length > 0) {
+      return viewingPost.children.data;
+    }
+    return [
+      {
+        id: viewingPost.id,
+        media_type: viewingPost.media_type,
+        media_url: viewingPost.media_url || viewingPost.thumbnail_url || "",
+      },
+    ];
+  }, [viewingPost]);
+
+  // Keyboard navigation for carousel slides (Left / Right arrow keys)
+  useEffect(() => {
+    if (!viewingPost || currentPostMediaItems.length <= 1) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "ArrowLeft") {
+        setViewingCarouselIndex((prev) => Math.max(0, prev - 1));
+      } else if (e.key === "ArrowRight") {
+        setViewingCarouselIndex((prev) =>
+          Math.min(currentPostMediaItems.length - 1, prev + 1)
+        );
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [viewingPost, currentPostMediaItems.length]);
 
   // Submit comment / reply
   const handlePostComment = async (e: React.FormEvent) => {
@@ -1092,6 +1277,18 @@ function InstagramContent() {
                   {scheduledPosts.map((post) => {
                     const scheduledDate = post.scheduledFor ? new Date(post.scheduledFor) : null;
                     const isOverdue = scheduledDate && scheduledDate.getTime() <= Date.now();
+                    const postUrls = (Array.isArray(post.mediaUrls) && post.mediaUrls.length > 0)
+                      ? post.mediaUrls
+                      : (() => {
+                          try {
+                            const parsed = JSON.parse(post.mediaUrl);
+                            return Array.isArray(parsed) ? parsed : [post.mediaUrl];
+                          } catch {
+                            return [post.mediaUrl];
+                          }
+                        })();
+                    const displayThumbnailUrl = postUrls[0] || post.mediaUrl;
+                    const isCarousel = post.mediaType === "CAROUSEL" || postUrls.length > 1;
 
                     return (
                       <div
@@ -1099,27 +1296,48 @@ function InstagramContent() {
                         className="p-4 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-sm flex flex-col justify-between gap-3"
                       >
                         <div className="flex items-start gap-3">
-                          <div className="w-20 h-20 rounded-xl overflow-hidden bg-zinc-100 dark:bg-zinc-800 flex-shrink-0">
+                          <div className="w-20 h-20 rounded-xl overflow-hidden bg-zinc-100 dark:bg-zinc-800 flex-shrink-0 relative">
                             {post.mediaType === "VIDEO" ? (
-                              <video src={post.mediaUrl} className="w-full h-full object-cover" />
+                              <video src={displayThumbnailUrl} className="w-full h-full object-cover" />
                             ) : (
-                              <img src={post.mediaUrl} alt="Scheduled post" className="w-full h-full object-cover" />
+                              <img src={displayThumbnailUrl} alt="Scheduled post" className="w-full h-full object-cover" />
+                            )}
+                            {isCarousel && (
+                              <div className="absolute top-1 right-1 bg-black/75 text-white text-[9px] font-bold px-1.5 py-0.5 rounded flex items-center gap-1 backdrop-blur-sm">
+                                <svg className="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 24 24">
+                                  <path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H8V4h12v12z" />
+                                </svg>
+                                {postUrls.length > 1 ? postUrls.length : ""}
+                              </div>
                             )}
                           </div>
 
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-1.5">
                               <span
-                                className={`px-2 py-0.5 text-[10px] font-bold rounded-md ${
-                                  isOverdue
+                                className={`px-2 py-0.5 text-[10px] font-bold rounded-md flex items-center gap-1 ${
+                                  post.status === "publishing"
+                                    ? "bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300 animate-pulse"
+                                    : isOverdue
                                     ? "bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300"
                                     : "bg-purple-100 text-purple-700 dark:bg-purple-950/60 dark:text-purple-300"
                                 }`}
                               >
-                                {isOverdue ? "Publishing soon..." : "Scheduled"}
+                                {post.status === "publishing" ? (
+                                  <>
+                                    <div className="w-2.5 h-2.5 border-2 border-rose-600 border-t-transparent rounded-full animate-spin" />
+                                    <span>Publishing...</span>
+                                  </>
+                                ) : isOverdue ? (
+                                  "Publishing soon..."
+                                ) : (
+                                  "Scheduled"
+                                )}
                               </span>
                               <span className="text-[10px] text-zinc-400 uppercase font-semibold">
-                                {post.mediaType}
+                                {isCarousel && postUrls.length > 1
+                                  ? `CAROUSEL (${postUrls.length} SLIDES)`
+                                  : post.mediaType}
                               </span>
                             </div>
 
@@ -1136,10 +1354,10 @@ function InstagramContent() {
                         <div className="flex items-center gap-2 pt-2 border-t border-zinc-100 dark:border-zinc-800">
                           <button
                             onClick={() => handlePublishScheduledNow(post.id)}
-                            disabled={publishingScheduledId === post.id}
+                            disabled={publishingScheduledId === post.id || post.status === "publishing"}
                             className="flex-1 py-1.5 bg-rose-600 hover:bg-rose-500 text-white rounded-lg text-xs font-semibold transition flex items-center justify-center gap-1 cursor-pointer disabled:opacity-60"
                           >
-                            {publishingScheduledId === post.id ? (
+                            {publishingScheduledId === post.id || post.status === "publishing" ? (
                               <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
                             ) : (
                               <span>Publish Now</span>
@@ -1354,78 +1572,286 @@ function InstagramContent() {
 
                 {/* Upload or URL Drop Zone */}
                 <div>
-                  <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider mb-2">
-                    Media File or Public HTTPS URL
-                  </label>
-
-                  <div
-                    onDragEnter={handleDrag}
-                    onDragLeave={handleDrag}
-                    onDragOver={handleDrag}
-                    onDrop={handleDrop}
-                    className={`border-2 border-dashed rounded-2xl p-5 text-center transition cursor-pointer ${
-                      dragActive
-                        ? "border-rose-500 bg-rose-50/20"
-                        : "border-zinc-200 dark:border-zinc-800 hover:border-zinc-400 dark:hover:border-zinc-700"
-                    }`}
-                    onClick={() => fileInputRef.current?.click()}
-                  >
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      multiple={postMediaType === "CAROUSEL"}
-                      accept={postMediaType === "VIDEO" ? "video/*" : "image/*,video/*"}
-                      onChange={handleFileUpload}
-                      className="hidden"
-                    />
-
-                    <div className="w-10 h-10 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-500 flex items-center justify-center mx-auto mb-2">
-                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-                      </svg>
-                    </div>
-
-                    <p className="text-xs font-semibold text-zinc-800 dark:text-zinc-200">
-                      {uploadingMedia ? "Uploading to Cloudinary..." : "Click to browse or drag & drop files here"}
-                    </p>
-                    <p className="text-[11px] text-zinc-400 mt-0.5">
-                      Supports JPG, PNG, WEBP, MP4, MOV
-                    </p>
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider">
+                      Media File or Public HTTPS URL
+                    </label>
+                    {uploadingMedia && (
+                      <span className="text-xs text-amber-500 font-semibold flex items-center gap-1.5 animate-pulse">
+                        <div className="w-3 h-3 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
+                        Uploading media...
+                      </span>
+                    )}
                   </div>
 
+                  {/* Hidden File Input */}
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    multiple={postMediaType === "CAROUSEL"}
+                    accept={postMediaType === "VIDEO" ? "video/*" : "image/*,video/*"}
+                    onChange={handleFileUpload}
+                    className="hidden"
+                  />
+
+                  {/* Case 1: CAROUSEL ALBUM MODE */}
+                  {postMediaType === "CAROUSEL" ? (
+                    <div className="space-y-3">
+                      {carouselUrls.length > 0 ? (
+                        <div className="p-3.5 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-2xl space-y-3">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-bold text-zinc-700 dark:text-zinc-300">
+                              Carousel Slides ({carouselUrls.length}/10)
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => fileInputRef.current?.click()}
+                              disabled={carouselUrls.length >= 10 || uploadingMedia}
+                              className="px-2.5 py-1 bg-zinc-200 hover:bg-zinc-300 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 rounded-lg text-xs font-semibold transition cursor-pointer flex items-center gap-1 disabled:opacity-50"
+                            >
+                              <span>+ Add Slides</span>
+                            </button>
+                          </div>
+
+                          {/* Carousel Slides Horizontal Grid */}
+                          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2.5 max-h-56 overflow-y-auto p-1">
+                            {carouselUrls.map((url, i) => {
+                              const isVid =
+                                Boolean(url.match(/\.(mp4|mov|webm)$/i)) ||
+                                uploadedMediaItems.find((it) => it.previewUrl === url || it.serverUrl === url)?.type === "VIDEO";
+                              const isSelected = previewSlideIdx === i;
+
+                              return (
+                                <div
+                                  key={i}
+                                  onClick={() => setPreviewSlideIdx(i)}
+                                  className={`relative aspect-square rounded-xl overflow-hidden border cursor-pointer transition-all group ${
+                                    isSelected
+                                      ? "border-rose-500 ring-2 ring-rose-500/30 shadow-md"
+                                      : "border-zinc-200 dark:border-zinc-800 hover:border-zinc-400"
+                                  }`}
+                                >
+                                  {isVid ? (
+                                    <video src={url} className="w-full h-full object-cover" muted />
+                                  ) : (
+                                    <img src={url} alt={`Slide ${i + 1}`} className="w-full h-full object-cover" />
+                                  )}
+
+                                  {/* Slide Number Badge */}
+                                  <span className="absolute top-1 left-1 px-1.5 py-0.5 rounded bg-black/70 text-white text-[10px] font-bold leading-none">
+                                    {i + 1}
+                                  </span>
+
+                                  {/* Video Indicator */}
+                                  {isVid && (
+                                    <span className="absolute bottom-1 left-1 px-1 py-0.5 rounded bg-black/70 text-white text-[9px] font-bold leading-none">
+                                      ▶
+                                    </span>
+                                  )}
+
+                                  {/* Delete Button */}
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleRemoveCarouselItem(i);
+                                    }}
+                                    title="Remove slide"
+                                    className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/70 hover:bg-rose-600 text-white text-xs flex items-center justify-center transition cursor-pointer"
+                                  >
+                                    &times;
+                                  </button>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      ) : (
+                        /* Empty Carousel Drop Zone */
+                        <div
+                          onDragEnter={handleDrag}
+                          onDragLeave={handleDrag}
+                          onDragOver={handleDrag}
+                          onDrop={handleDrop}
+                          onClick={() => fileInputRef.current?.click()}
+                          className={`border-2 border-dashed rounded-2xl p-6 text-center transition cursor-pointer ${
+                            dragActive
+                              ? "border-rose-500 bg-rose-50/20"
+                              : "border-zinc-200 dark:border-zinc-800 hover:border-zinc-400 dark:hover:border-zinc-700"
+                          }`}
+                        >
+                          <div className="w-10 h-10 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-500 flex items-center justify-center mx-auto mb-2">
+                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                            </svg>
+                          </div>
+                          <p className="text-xs font-semibold text-zinc-800 dark:text-zinc-200">
+                            {uploadingMedia ? "Uploading carousel slides..." : "Click to select 2 to 10 photos or videos"}
+                          </p>
+                          <p className="text-[11px] text-zinc-400 mt-0.5">
+                            Supports multiple JPG, PNG, WEBP, MP4, MOV files
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  ) : postMediaType === "VIDEO" && (mediaUrlInput || uploadedMediaItems.length > 0) ? (
+                    /* Case 2: REEL / VIDEO PREVIEW CARD */
+                    <div className="p-3.5 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-2xl flex items-center gap-3.5">
+                      <div className="relative w-16 h-20 rounded-xl overflow-hidden border border-zinc-200 dark:border-zinc-800 bg-black shrink-0">
+                        <video src={mediaUrlInput} className="w-full h-full object-cover" muted playsInline />
+                        <span className="absolute bottom-1 left-1 px-1 rounded bg-black/70 text-white text-[9px] font-bold">
+                          ▶ Reel
+                        </span>
+                      </div>
+
+                      <div className="flex-1 min-w-0 space-y-1">
+                        <p className="text-xs font-bold text-zinc-900 dark:text-white truncate">
+                          {uploadedMediaItems[0]?.name || "Instagram Reel / Video"}
+                        </p>
+                        <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
+                          {uploadedMediaItems[0]?.size
+                            ? `${(uploadedMediaItems[0].size / (1024 * 1024)).toFixed(1)} MB • Video`
+                            : "Video file ready"}
+                        </p>
+                        <div>
+                          {uploadingMedia ? (
+                            <span className="text-[11px] text-amber-500 font-semibold flex items-center gap-1 animate-pulse">
+                              <div className="w-2.5 h-2.5 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
+                              Uploading to server...
+                            </span>
+                          ) : (
+                            <span className="text-[11px] text-emerald-500 dark:text-emerald-400 font-semibold flex items-center gap-1">
+                              ✓ Video ready for Instagram
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="flex flex-col gap-1.5 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => fileInputRef.current?.click()}
+                          className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 transition cursor-pointer"
+                        >
+                          Change
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleRemoveSingleMedia}
+                          className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-red-50 dark:bg-red-950/40 hover:bg-red-100 text-red-600 dark:text-red-400 transition cursor-pointer"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    </div>
+                  ) : postMediaType === "IMAGE" && (mediaUrlInput || uploadedMediaItems.length > 0) ? (
+                    /* Case 3: SINGLE PHOTO PREVIEW CARD */
+                    <div className="p-3.5 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-2xl flex items-center gap-3.5">
+                      <div className="relative w-16 h-16 rounded-xl overflow-hidden border border-zinc-200 dark:border-zinc-800 bg-zinc-100 dark:bg-zinc-900 shrink-0">
+                        <img src={mediaUrlInput} alt="Uploaded" className="w-full h-full object-cover" />
+                      </div>
+
+                      <div className="flex-1 min-w-0 space-y-1">
+                        <p className="text-xs font-bold text-zinc-900 dark:text-white truncate">
+                          {uploadedMediaItems[0]?.name || "Instagram Photo"}
+                        </p>
+                        <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
+                          {uploadedMediaItems[0]?.size
+                            ? `${(uploadedMediaItems[0].size / (1024 * 1024)).toFixed(1)} MB • Image`
+                            : "Image file ready"}
+                        </p>
+                        <div>
+                          {uploadingMedia ? (
+                            <span className="text-[11px] text-amber-500 font-semibold flex items-center gap-1 animate-pulse">
+                              <div className="w-2.5 h-2.5 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
+                              Uploading to server...
+                            </span>
+                          ) : (
+                            <span className="text-[11px] text-emerald-500 dark:text-emerald-400 font-semibold flex items-center gap-1">
+                              ✓ Ready for Instagram
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="flex flex-col gap-1.5 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => fileInputRef.current?.click()}
+                          className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 transition cursor-pointer"
+                        >
+                          Change
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleRemoveSingleMedia}
+                          className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-red-50 dark:bg-red-950/40 hover:bg-red-100 text-red-600 dark:text-red-400 transition cursor-pointer"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    /* Case 4: EMPTY DROP ZONE (Photo or Video) */
+                    <div
+                      onDragEnter={handleDrag}
+                      onDragLeave={handleDrag}
+                      onDragOver={handleDrag}
+                      onDrop={handleDrop}
+                      onClick={() => fileInputRef.current?.click()}
+                      className={`border-2 border-dashed rounded-2xl p-5 text-center transition cursor-pointer ${
+                        dragActive
+                          ? "border-rose-500 bg-rose-50/20"
+                          : "border-zinc-200 dark:border-zinc-800 hover:border-zinc-400 dark:hover:border-zinc-700"
+                      }`}
+                    >
+                      <div className="w-10 h-10 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-500 flex items-center justify-center mx-auto mb-2">
+                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                        </svg>
+                      </div>
+
+                      <p className="text-xs font-semibold text-zinc-800 dark:text-zinc-200">
+                        {uploadingMedia
+                          ? "Uploading to server..."
+                          : postMediaType === "VIDEO"
+                          ? "Click to browse or drag & drop Reel / Video here"
+                          : "Click to browse or drag & drop photo here"}
+                      </p>
+                      <p className="text-[11px] text-zinc-400 mt-0.5">
+                        {postMediaType === "VIDEO"
+                          ? "Supports MP4, MOV (Recommended 9:16 vertical)"
+                          : "Supports JPG, PNG, WEBP"}
+                      </p>
+                    </div>
+                  )}
+
                   {/* Manual URL Input */}
-                  <div className="mt-2.5 flex gap-2">
+                  <div className="mt-2.5 flex items-center gap-2">
                     <input
                       type="url"
                       value={mediaUrlInput}
                       onChange={(e) => {
-                        setMediaUrlInput(e.target.value);
-                        if (postMediaType === "CAROUSEL" && e.target.value) {
-                          setCarouselUrls([e.target.value]);
+                        const val = e.target.value;
+                        setMediaUrlInput(val);
+                        if (postMediaType === "CAROUSEL" && val) {
+                          setCarouselUrls([val]);
                         }
                       }}
-                      placeholder="https://example.com/image.jpg"
+                      placeholder="Or enter public HTTPS URL (e.g. https://example.com/media.jpg)"
                       className="flex-1 px-3 py-2 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl text-xs text-zinc-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-rose-500"
                     />
+                    {mediaUrlInput && (
+                      <button
+                        type="button"
+                        onClick={handleRemoveSingleMedia}
+                        className="px-2 py-1.5 text-xs text-zinc-400 hover:text-zinc-200 rounded-lg hover:bg-zinc-800"
+                        title="Clear URL"
+                      >
+                        ✕
+                      </button>
+                    )}
                   </div>
-
-                  {/* Carousel Items Preview List */}
-                  {postMediaType === "CAROUSEL" && carouselUrls.length > 0 && (
-                    <div className="mt-2.5 flex items-center gap-2 overflow-x-auto py-1">
-                      {carouselUrls.map((u, i) => (
-                        <div key={i} className="relative w-14 h-14 rounded-lg overflow-hidden border border-zinc-300 dark:border-zinc-700 flex-shrink-0">
-                          <img src={u} alt="carousel item" className="w-full h-full object-cover" />
-                          <button
-                            type="button"
-                            onClick={() => setCarouselUrls((prev) => prev.filter((_, idx) => idx !== i))}
-                            className="absolute top-0.5 right-0.5 w-4 h-4 rounded-full bg-black/70 text-white text-[10px] flex items-center justify-center leading-none"
-                          >
-                            &times;
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
                 </div>
 
                 {/* Caption & Hashtags */}
@@ -1455,7 +1881,7 @@ function InstagramContent() {
                         key={tag}
                         type="button"
                         onClick={() => appendHashtag(tag)}
-                        className="px-2 py-0.5 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 rounded-md text-[11px] font-medium text-zinc-600 dark:text-zinc-400 transition"
+                        className="px-2 py-0.5 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 rounded-md text-[11px] font-medium text-zinc-600 dark:text-zinc-400 transition cursor-pointer"
                       >
                         {tag}
                       </button>
@@ -1558,16 +1984,95 @@ function InstagramContent() {
                   </div>
 
                   {/* Mockup Media Preview */}
-                  <div className="relative aspect-square bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center overflow-hidden">
+                  <div className="relative aspect-square bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center overflow-hidden group/preview">
                     {postMediaType === "CAROUSEL" && carouselUrls.length > 0 ? (
-                      <img
-                        src={carouselUrls[previewSlideIdx] || carouselUrls[0]}
-                        alt="Preview"
-                        className="w-full h-full object-cover"
-                      />
+                      (() => {
+                        const currentSlideUrl = carouselUrls[previewSlideIdx] || carouselUrls[0];
+                        const isSlideVideo =
+                          Boolean(currentSlideUrl?.match(/\.(mp4|mov|webm)$/i)) ||
+                          uploadedMediaItems.find((it) => it.previewUrl === currentSlideUrl || it.serverUrl === currentSlideUrl)?.type === "VIDEO";
+
+                        return (
+                          <>
+                            {isSlideVideo ? (
+                              <video
+                                key={currentSlideUrl}
+                                src={currentSlideUrl}
+                                className="w-full h-full object-cover"
+                                autoPlay
+                                loop
+                                muted
+                                playsInline
+                              />
+                            ) : (
+                              <img
+                                key={currentSlideUrl}
+                                src={currentSlideUrl}
+                                alt={`Slide ${previewSlideIdx + 1}`}
+                                className="w-full h-full object-cover"
+                              />
+                            )}
+
+                            {/* Carousel Slide Badge (Top Right) */}
+                            <div className="absolute top-2.5 right-2.5 px-2 py-0.5 rounded-full bg-black/60 backdrop-blur-md text-white text-[10px] font-bold flex items-center gap-1 shadow-md">
+                              <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                              </svg>
+                              <span>
+                                {previewSlideIdx + 1}/{carouselUrls.length}
+                              </span>
+                            </div>
+
+                            {/* Carousel Floating Nav Arrows */}
+                            {carouselUrls.length > 1 && (
+                              <>
+                                {previewSlideIdx > 0 && (
+                                  <button
+                                    type="button"
+                                    onClick={() => setPreviewSlideIdx((p) => Math.max(0, p - 1))}
+                                    className="absolute left-2 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-black/60 hover:bg-black/80 text-white flex items-center justify-center transition shadow-md cursor-pointer text-xs"
+                                  >
+                                    ‹
+                                  </button>
+                                )}
+                                {previewSlideIdx < carouselUrls.length - 1 && (
+                                  <button
+                                    type="button"
+                                    onClick={() => setPreviewSlideIdx((p) => Math.min(carouselUrls.length - 1, p + 1))}
+                                    className="absolute right-2 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-black/60 hover:bg-black/80 text-white flex items-center justify-center transition shadow-md cursor-pointer text-xs"
+                                  >
+                                    ›
+                                  </button>
+                                )}
+                              </>
+                            )}
+
+                            {/* Carousel Bottom Dots */}
+                            {carouselUrls.length > 1 && (
+                              <div className="absolute bottom-2 left-0 right-0 flex items-center justify-center gap-1">
+                                {carouselUrls.map((_, dotIdx) => (
+                                  <button
+                                    key={dotIdx}
+                                    type="button"
+                                    onClick={() => setPreviewSlideIdx(dotIdx)}
+                                    className={`w-1.5 h-1.5 rounded-full transition ${
+                                      previewSlideIdx === dotIdx ? "bg-white scale-125" : "bg-white/50"
+                                    }`}
+                                  />
+                                ))}
+                              </div>
+                            )}
+                          </>
+                        );
+                      })()
                     ) : mediaUrlInput ? (
                       postMediaType === "VIDEO" ? (
-                        <video src={mediaUrlInput} className="w-full h-full object-cover" autoPlay loop muted />
+                        <div className="relative w-full h-full">
+                          <video src={mediaUrlInput} className="w-full h-full object-cover" autoPlay loop muted playsInline />
+                          <span className="absolute bottom-2 left-2 px-1.5 py-0.5 rounded bg-black/60 text-white text-[10px] font-bold">
+                            ▶ Reel
+                          </span>
+                        </div>
                       ) : (
                         <img src={mediaUrlInput} alt="Preview" className="w-full h-full object-cover" />
                       )
@@ -1577,25 +2082,11 @@ function InstagramContent() {
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                         </svg>
                         <p className="text-[11px]">Media preview will appear here</p>
-                      </div>
-                    )}
-
-                    {/* Carousel Dots */}
-                    {postMediaType === "CAROUSEL" && carouselUrls.length > 1 && (
-                      <div className="absolute bottom-2 left-0 right-0 flex items-center justify-center gap-1">
-                        {carouselUrls.map((_, dotIdx) => (
-                          <button
-                            key={dotIdx}
-                            type="button"
-                            onClick={() => setPreviewSlideIdx(dotIdx)}
-                            className={`w-1.5 h-1.5 rounded-full transition ${
-                              previewSlideIdx === dotIdx ? "bg-white scale-125" : "bg-white/50"
-                            }`}
-                          />
-                        ))}
+                        <p className="text-[10px] text-zinc-500 mt-0.5">Upload a photo, video reel, or carousel on the left</p>
                       </div>
                     )}
                   </div>
+
 
                   {/* Mockup Icons Bar */}
                   <div className="p-3 space-y-2">
@@ -1634,24 +2125,140 @@ function InstagramContent() {
       {viewingPost && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 lg:p-8 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
           <div className="bg-white dark:bg-[#0f0f12] border border-zinc-200 dark:border-zinc-800 rounded-2xl w-full max-w-6xl xl:max-w-7xl overflow-hidden shadow-2xl flex flex-col md:flex-row h-full max-h-[88vh]">
-            {/* Left: Media Preview */}
-            <div className="md:w-[58%] lg:w-[62%] bg-black flex items-center justify-center relative overflow-hidden p-2">
-              {viewingPost.media_type === "VIDEO" || viewingPost.media_type === "REELS" ? (
-                <video src={viewingPost.media_url} controls className="max-h-[84vh] w-full h-full object-contain" />
-              ) : (
-                <img
-                  src={viewingPost.media_url || viewingPost.thumbnail_url}
-                  alt={viewingPost.caption || "Post"}
-                  className="max-h-[84vh] w-full h-full object-contain"
-                />
+            {/* Left: Media Preview & Carousel */}
+            <div
+              className="md:w-[58%] lg:w-[62%] bg-gradient-to-b from-zinc-950 via-black to-zinc-950 flex items-center justify-center relative overflow-hidden p-2 select-none group/media"
+              onTouchStart={(e) => setTouchStartX(e.touches[0].clientX)}
+              onTouchEnd={(e) => {
+                if (touchStartX === null) return;
+                const touchEndX = e.changedTouches[0].clientX;
+                const diffX = touchStartX - touchEndX;
+                if (Math.abs(diffX) > 40) {
+                  if (diffX > 0 && viewingCarouselIndex < currentPostMediaItems.length - 1) {
+                    setViewingCarouselIndex((prev) => prev + 1);
+                  } else if (diffX < 0 && viewingCarouselIndex > 0) {
+                    setViewingCarouselIndex((prev) => prev - 1);
+                  }
+                }
+                setTouchStartX(null);
+              }}
+            >
+              {loadingCarouselChildren && (
+                <div className="absolute inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center z-30">
+                  <div className="flex flex-col items-center gap-2 text-white">
+                    <div className="w-7 h-7 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                    <span className="text-xs text-zinc-300 font-medium">Loading slides...</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Multi-image counter badge */}
+              {currentPostMediaItems.length > 1 && (
+                <div className="absolute top-4 left-4 z-20 px-3 py-1.5 bg-black/70 backdrop-blur-md rounded-full text-white text-xs font-semibold flex items-center gap-1.5 shadow-lg border border-white/10">
+                  <svg className="w-3.5 h-3.5 text-zinc-300" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H8V4h12v12z" />
+                  </svg>
+                  <span>
+                    {viewingCarouselIndex + 1} / {currentPostMediaItems.length}
+                  </span>
+                </div>
+              )}
+
+              {/* Carousel Previous Arrow Button */}
+              {currentPostMediaItems.length > 1 && viewingCarouselIndex > 0 && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setViewingCarouselIndex((prev) => Math.max(0, prev - 1));
+                  }}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 z-20 p-3 rounded-full bg-black/60 hover:bg-black/90 text-white backdrop-blur-md border border-white/20 transition-all duration-150 shadow-2xl cursor-pointer hover:scale-110 active:scale-95"
+                  title="Previous image (←)"
+                >
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
+                  </svg>
+                </button>
+              )}
+
+              {/* Carousel Next Arrow Button */}
+              {currentPostMediaItems.length > 1 && viewingCarouselIndex < currentPostMediaItems.length - 1 && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setViewingCarouselIndex((prev) =>
+                      Math.min(currentPostMediaItems.length - 1, prev + 1)
+                    );
+                  }}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 z-20 p-3 rounded-full bg-black/60 hover:bg-black/90 text-white backdrop-blur-md border border-white/20 transition-all duration-150 shadow-2xl cursor-pointer hover:scale-110 active:scale-95"
+                  title="Next image (→)"
+                >
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                  </svg>
+                </button>
+              )}
+
+              {/* Media Element (Image or Video) */}
+              {(() => {
+                const currentItem = currentPostMediaItems[viewingCarouselIndex] || currentPostMediaItems[0];
+                const isItemVideo =
+                  currentItem?.media_type === "VIDEO" ||
+                  currentItem?.media_type === "REELS" ||
+                  Boolean(currentItem?.media_url?.match(/\.(mp4|mov|webm)$/i));
+
+                if (isItemVideo) {
+                  return (
+                    <video
+                      key={currentItem?.id || viewingCarouselIndex}
+                      src={currentItem?.media_url}
+                      controls
+                      autoPlay
+                      className="max-h-[84vh] w-full h-full object-contain transition-opacity duration-200"
+                    />
+                  );
+                }
+
+                return (
+                  <img
+                    key={currentItem?.id || viewingCarouselIndex}
+                    src={currentItem?.media_url || viewingPost.thumbnail_url || viewingPost.media_url}
+                    alt={viewingPost.caption || "Instagram post"}
+                    className="max-h-[84vh] w-full h-full object-contain transition-opacity duration-200 select-none pointer-events-auto"
+                    draggable={false}
+                  />
+                );
+              })()}
+
+              {/* Pagination Dots */}
+              {currentPostMediaItems.length > 1 && (
+                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1.5 px-3 py-1.5 bg-black/60 backdrop-blur-md rounded-full border border-white/10 shadow-xl">
+                  {currentPostMediaItems.map((_item: unknown, idx: number) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setViewingCarouselIndex(idx);
+                      }}
+                      className={`transition-all duration-200 rounded-full cursor-pointer ${
+                        idx === viewingCarouselIndex
+                          ? "w-5 h-2 bg-white shadow-xs"
+                          : "w-2 h-2 bg-white/40 hover:bg-white/70"
+                      }`}
+                      title={`Go to slide ${idx + 1}`}
+                    />
+                  ))}
+                </div>
               )}
             </div>
 
             {/* Right: Caption, Metrics & Live Comments */}
             <div className="md:w-[42%] lg:w-[38%] flex flex-col justify-between bg-white dark:bg-[#111114] border-t md:border-t-0 md:border-l border-zinc-200 dark:border-zinc-800 min-h-0">
               {/* Header */}
-              <div className="p-4 sm:p-5 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between shrink-0">
-                <div className="flex items-center gap-3">
+              <div className="p-4 sm:p-5 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between gap-3 shrink-0">
+                <div className="flex items-center gap-3 min-w-0">
                   <div className="w-9 h-9 rounded-full bg-zinc-200 dark:bg-zinc-800 overflow-hidden flex items-center justify-center font-bold shrink-0">
                     {currentAccount?.profilePictureUrl ? (
                       <img src={currentAccount.profilePictureUrl} alt="avatar" className="w-full h-full object-cover" />
@@ -1659,8 +2266,8 @@ function InstagramContent() {
                       currentAccount?.username?.charAt(0) || "U"
                     )}
                   </div>
-                  <div>
-                    <p className="text-sm font-bold text-zinc-900 dark:text-white leading-tight">
+                  <div className="min-w-0">
+                    <p className="text-sm font-bold text-zinc-900 dark:text-white leading-tight truncate">
                       {currentAccount?.username ? `@${currentAccount.username}` : "Account not connected"}
                     </p>
                     <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-tight mt-0.5">
@@ -1669,17 +2276,17 @@ function InstagramContent() {
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5 shrink-0">
                   <button
                     onClick={() => viewingPost && fetchComments(viewingPost.id)}
                     disabled={loadingComments}
-                    className="px-3.5 py-1.5 bg-white dark:bg-[#111114] hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 rounded-xl text-xs font-semibold transition-all duration-150 shadow-xs flex items-center gap-1.5 cursor-pointer disabled:opacity-60 active:scale-97"
+                    className="px-3 py-1.5 bg-white dark:bg-[#111114] hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 rounded-xl text-xs font-semibold transition-all duration-150 shadow-xs flex items-center gap-1.5 cursor-pointer disabled:opacity-60 active:scale-97"
                     title="Live refresh comments"
                   >
                     <svg className={`w-3.5 h-3.5 ${loadingComments ? "animate-spin text-blue-500" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
                     </svg>
-                    <span>{loadingComments ? "Syncing..." : "Sync Comments"}</span>
+                    <span className="hidden sm:inline">{loadingComments ? "Syncing..." : "Sync"}</span>
                   </button>
                   {viewingPost.permalink && (
                     <a
@@ -1702,7 +2309,7 @@ function InstagramContent() {
                     <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
                     </svg>
-                    <span>Delete</span>
+                    <span className="hidden sm:inline">Delete</span>
                   </button>
                   <button
                     onClick={() => setViewingPost(null)}
@@ -1719,8 +2326,25 @@ function InstagramContent() {
               <div className="p-4 sm:p-5 overflow-y-auto flex-1 space-y-4">
                 {viewingPost.caption && (
                   <div>
-                    <p className="text-xs text-zinc-500 dark:text-zinc-400 font-semibold mb-1">CAPTION</p>
-                    <p className="text-xs text-zinc-800 dark:text-zinc-200 whitespace-pre-wrap leading-relaxed">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <p className="text-xs text-zinc-500 dark:text-zinc-400 font-semibold tracking-wider">CAPTION</p>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (viewingPost.caption) {
+                            navigator.clipboard.writeText(viewingPost.caption);
+                            setToast({ type: "success", message: "Caption copied to clipboard!" });
+                          }
+                        }}
+                        className="text-[11px] text-zinc-400 hover:text-zinc-200 flex items-center gap-1 font-medium cursor-pointer"
+                      >
+                        <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                        </svg>
+                        Copy
+                      </button>
+                    </div>
+                    <p className="text-xs text-zinc-800 dark:text-zinc-200 whitespace-pre-wrap leading-relaxed max-h-48 overflow-y-auto pr-1">
                       {viewingPost.caption}
                     </p>
                   </div>

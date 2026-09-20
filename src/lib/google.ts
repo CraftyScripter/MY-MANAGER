@@ -27,7 +27,7 @@ export function getGoogleRedirectUri(): string {
   return `${baseUrl.replace(/\/$/, "")}/auth/google/callback`;
 }
 
-export function getGoogleAuthUrl(state: string = "admin", prompt: string = "select_account"): string {
+export function getGoogleAuthUrl(state: string = "admin", prompt: string = "consent select_account"): string {
   const clientId = getGoogleClientId();
   const redirectUri = getGoogleRedirectUri();
 
@@ -181,25 +181,54 @@ export async function getValidGoogleAccount(userId: string = "admin") {
 
 export async function getWorkspaceAdminGoogleAccount(workspaceAdminId?: string) {
   if (workspaceAdminId && workspaceAdminId !== "admin") {
-    // 1. Try finding by userId directly
-    const userAccount = await getValidGoogleAccount(workspaceAdminId);
+    let targetAdminId = workspaceAdminId;
+
+    // If the provided ID belongs to a team member, resolve to the Admin who created them
+    const targetUser = await prisma.user.findUnique({
+      where: { id: workspaceAdminId },
+      select: { id: true, role: true, email: true },
+    });
+
+    if (targetUser && targetUser.role !== "admin") {
+      const membership =
+        (await prisma.workspaceMembership.findFirst({
+          where: { userId: targetUser.id, isActive: true },
+          select: { workspaceId: true },
+          orderBy: { createdAt: "desc" },
+        })) ||
+        (await prisma.workspaceMembership.findFirst({
+          where: { userId: targetUser.id },
+          select: { workspaceId: true },
+          orderBy: { createdAt: "desc" },
+        }));
+      if (membership?.workspaceId) {
+        targetAdminId = membership.workspaceId;
+      }
+    }
+
+    // 1. Try finding by targetAdminId directly
+    const userAccount = await getValidGoogleAccount(targetAdminId);
     if (userAccount) return userAccount;
 
-    // 2. Check if the user exists and has a linked google account by email
-    const user = await prisma.user.findUnique({
-      where: { id: workspaceAdminId },
-      select: { email: true },
-    });
-    if (user) {
+    // 2. Check if the admin user exists and has a linked google account by email
+    const adminUser =
+      targetAdminId === workspaceAdminId && targetUser
+        ? targetUser
+        : await prisma.user.findUnique({
+            where: { id: targetAdminId },
+            select: { id: true, email: true },
+          });
+
+    if (adminUser) {
       const accountByEmail = await prisma.googleAccount.findFirst({
-        where: { email: user.email.toLowerCase() },
+        where: { email: adminUser.email.toLowerCase() },
         orderBy: { updatedAt: "desc" },
       });
       if (accountByEmail) {
-        if (accountByEmail.userId !== workspaceAdminId) {
+        if (accountByEmail.userId !== targetAdminId) {
           await prisma.googleAccount.update({
             where: { id: accountByEmail.id },
-            data: { userId: workspaceAdminId },
+            data: { userId: targetAdminId },
           });
         }
         return accountByEmail;

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getCurrentUser } from "@/lib/auth";
+import { getCurrentUser, getEffectiveWorkspaceAdminId } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { fetchInstagramMediaInsights, fetchInstagramAccountInsights } from "@/lib/instagram";
 
@@ -15,9 +15,10 @@ export async function GET(request: NextRequest) {
     const mediaType = searchParams.get("mediaType") || "IMAGE";
     const accountId = searchParams.get("accountId");
 
+    const workspaceId = getEffectiveWorkspaceAdminId(user);
     const account = accountId
-      ? await prisma.instagramAccount.findUnique({ where: { id: accountId } })
-      : await prisma.instagramAccount.findFirst({ orderBy: { updatedAt: "desc" } });
+      ? await prisma.instagramAccount.findFirst({ where: { id: accountId, userId: workspaceId } })
+      : await prisma.instagramAccount.findFirst({ where: { userId: workspaceId }, orderBy: { updatedAt: "desc" } });
 
     if (!account) {
       return NextResponse.json({ error: "No connected Instagram account found" }, { status: 404 });

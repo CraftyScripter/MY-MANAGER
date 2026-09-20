@@ -177,6 +177,33 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
 
   if (!user || !user.isActive) return null;
 
+  // Fallback for team members whose token did not include workspaceId:
+  if (user.role !== "admin") {
+    const membership =
+      (await prisma.workspaceMembership.findFirst({
+        where: { userId: user.id, isActive: true },
+        orderBy: { createdAt: "desc" },
+      })) ||
+      (await prisma.workspaceMembership.findFirst({
+        where: { userId: user.id },
+        orderBy: { createdAt: "desc" },
+      }));
+    if (membership) {
+      return {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        role: membership.role || user.role,
+        permissions:
+          membership.permissions && membership.permissions.length > 0
+            ? membership.permissions
+            : user.permissions,
+        workspaceId: membership.workspaceId,
+      };
+    }
+  }
+
   return {
     id: user.id,
     name: user.name,
@@ -185,7 +212,6 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
     role: user.role,
     permissions: user.permissions,
   };
-
 }
 
 export async function requireAuth(): Promise<CurrentUser> {

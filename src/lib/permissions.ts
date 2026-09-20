@@ -9,6 +9,7 @@ export const SECTIONS = {
   team: { label: "Team", href: "/admin/team", description: "Manage team members, roles, and section access" },
   activity_log: { label: "Activity Log", href: "/admin/activity-log", description: "Audit trail of admin and team actions across the system" },
   instagram: { label: "Instagram", href: "/admin/instagram", description: "Connect Instagram account, view and publish posts" },
+  tasks: { label: "Task Manager", href: "/admin/tasks", description: "AI-powered task management, step decomposition, and tracking" },
   settings: { label: "Settings", href: "/admin/settings", description: "Application configuration and account security" },
 } as const;
 
@@ -33,6 +34,7 @@ export const SECTION_PERMISSION_MAP: Record<string, SectionKey> = {
   "/admin": "dashboard",
   "/admin/all": "leads",
   "/admin/leads": "leads",
+  "/admin/tasks": "tasks",
   "/admin/promise-me": "forms",
   "/admin/credentials": "credentials",
   "/admin/payments": "finance",
@@ -50,6 +52,7 @@ export const API_PERMISSION_MAP: Record<string, SectionKey> = {
   "/api/admin/enquiries": "leads",
   "/api/admin/reply": "leads",
   "/api/admin/leads": "leads",
+  "/api/v1/tasks": "tasks",
   "/api/admin/promise-me": "forms",
   "/api/admin/credentials": "credentials",
   "/api/admin/payments": "finance",

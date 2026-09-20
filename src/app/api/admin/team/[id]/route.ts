@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getCurrentUser, checkPermission } from "@/lib/auth";
+import { getCurrentUser, checkPermission, getEffectiveWorkspaceAdminId } from "@/lib/auth";
 import { ALL_PERMISSIONS } from "@/lib/permissions";
 
 export async function GET(
@@ -14,12 +14,52 @@ export async function GET(
     }
 
     const { id } = await params;
+    const workspaceId = getEffectiveWorkspaceAdminId(user);
+
+    // If requesting the workspace owner
+    if (id === workspaceId) {
+      const owner = await prisma.user.findUnique({
+        where: { id: workspaceId },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          phone: true,
+          role: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      });
+
+      if (!owner) {
+        return NextResponse.json(
+          { error: "Team member not found" },
+          { status: 404 }
+        );
+      }
+
+      return NextResponse.json({
+        member: {
+          id: owner.id,
+          membershipId: null,
+          name: owner.name,
+          email: owner.email,
+          phone: owner.phone,
+          role: "admin",
+          permissions: ["*"],
+          isActive: true,
+          createdAt: owner.createdAt,
+          updatedAt: owner.updatedAt,
+          isOwner: true,
+        },
+      });
+    }
 
     // Find membership for this user in this workspace
     const membership = await prisma.workspaceMembership.findUnique({
       where: {
         workspaceId_userId: {
-          workspaceId: user.id,
+          workspaceId,
           userId: id,
         },
       },
@@ -59,6 +99,7 @@ export async function GET(
       isActive: membership.isActive,
       createdAt: membership.createdAt,
       updatedAt: membership.updatedAt,
+      isOwner: false,
     };
 
     return NextResponse.json({ member });
@@ -77,11 +118,23 @@ export async function PUT(
 ) {
   try {
     const user = await getCurrentUser();
-    if (!user || !checkPermission(user, "team", "write")) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    if (!user || user.role !== "admin") {
+      return NextResponse.json(
+        { error: "Only administrators can update team members" },
+        { status: 403 }
+      );
     }
 
     const { id } = await params;
+    const workspaceId = getEffectiveWorkspaceAdminId(user);
+
+    if (id === workspaceId) {
+      return NextResponse.json(
+        { error: "Cannot modify workspace owner permissions" },
+        { status: 400 }
+      );
+    }
+
     const body = await request.json();
     const { name, email, phone, permissions } = body;
 
@@ -89,7 +142,7 @@ export async function PUT(
     const membership = await prisma.workspaceMembership.findUnique({
       where: {
         workspaceId_userId: {
-          workspaceId: user.id,
+          workspaceId,
           userId: id,
         },
       },
@@ -188,6 +241,7 @@ export async function PUT(
       isActive: updatedMembership!.isActive,
       createdAt: updatedMembership!.createdAt,
       updatedAt: updatedMembership!.updatedAt,
+      isOwner: false,
     };
 
     return NextResponse.json({ success: true, member });
@@ -206,17 +260,29 @@ export async function DELETE(
 ) {
   try {
     const user = await getCurrentUser();
-    if (!user || !checkPermission(user, "team", "write")) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    if (!user || user.role !== "admin") {
+      return NextResponse.json(
+        { error: "Only administrators can remove team members" },
+        { status: 403 }
+      );
     }
 
     const { id } = await params;
+    const workspaceId = getEffectiveWorkspaceAdminId(user);
+
+    // Prevent deleting the workspace administrator/owner
+    if (id === workspaceId) {
+      return NextResponse.json(
+        { error: "Cannot delete the workspace administrator" },
+        { status: 400 }
+      );
+    }
 
     // Find membership
     const membership = await prisma.workspaceMembership.findUnique({
       where: {
         workspaceId_userId: {
-          workspaceId: user.id,
+          workspaceId,
           userId: id,
         },
       },
@@ -227,6 +293,13 @@ export async function DELETE(
       return NextResponse.json(
         { error: "Team member not found" },
         { status: 404 }
+      );
+    }
+
+    if (membership.role === "admin") {
+      return NextResponse.json(
+        { error: "Cannot delete an administrator" },
+        { status: 400 }
       );
     }
 

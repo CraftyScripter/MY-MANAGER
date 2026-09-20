@@ -373,6 +373,7 @@ model InstagramPostLog {
   mediaId            String?
   caption            String?
   mediaUrl           String
+  mediaUrls          String[]          @default([])
   mediaType          String            @default("IMAGE")
   permalink          String?
   status             String            @default("published") // published, scheduled, failed, draft
@@ -525,6 +526,37 @@ model FormApiKey {
 
   @@unique([projectId])
   @@unique([apiKey])
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// AI-Powered Task Management System
+// ═══════════════════════════════════════════════════════════════════
+
+model Task {
+  id          String    @id @default(cuid()) @map("_id")
+  workspaceId String    // Multi-tenant isolation: Admin ID / Workspace ID
+  createdBy   String    // ID of the user who created this task
+  title       String
+  description String?
+  scope       String    @default("CLIENT") // PERSONAL, CLIENT
+  category    String    @default("OPERATIONS") // DEVELOPMENT, SOCIAL_MEDIA, LEAD_GENERATION, OPERATIONS, UI_UX_DESIGN, PERSONAL_ADMIN
+  priority    String    @default("MEDIUM") // LOW, MEDIUM, HIGH, URGENT
+  dueDate     DateTime?
+  assigneeIds String[]  @default([])
+  subTasks    Json      // Array of { step: number, title: string, completed: boolean }
+  status      String    @default("TODO") // TODO, IN_PROGRESS, DONE, CANCELLED
+  isPrivate   Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([workspaceId])
+  @@index([createdBy])
+  @@index([scope])
+  @@index([category])
+  @@index([priority])
+  @@index([status])
+  @@index([dueDate])
+  @@index([createdAt])
 }
 
 
