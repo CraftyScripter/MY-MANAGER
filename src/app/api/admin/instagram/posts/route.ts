@@ -8,6 +8,7 @@ import {
   fetchInstagramProfile,
   fetchInstagramMediaChildren,
 } from "@/lib/instagram";
+import { processDueScheduledPosts } from "@/lib/instagramScheduler";
 
 export async function GET(request: NextRequest) {
   try {
@@ -93,106 +94,20 @@ export async function GET(request: NextRequest) {
       account.accessToken
     );
 
+    // Auto-process any scheduled posts that have reached their scheduled time first
+    await processDueScheduledPosts(account.id);
+
     // Fetch local post logs
     const allLocalLogs = await prisma.instagramPostLog.findMany({
       where: { instagramAccountId: account.id },
       orderBy: { createdAt: "desc" },
     });
 
-    const rawScheduled = allLocalLogs.filter((p) => p.status === "scheduled");
     const publishedLogs = allLocalLogs.filter((p) => p.status === "published");
     const deletedLogs = allLocalLogs.filter((p) => p.status === "deleted" || p.status === "hidden");
     const deletedMediaIds = new Set(
       deletedLogs.map((p) => p.mediaId || p.id).filter(Boolean) as string[]
     );
-
-    // 0. Recover any posts stuck in "publishing" for more than 5 minutes (e.g. server crash)
-    await prisma.instagramPostLog.updateMany({
-      where: {
-        instagramAccountId: account.id,
-        status: "publishing",
-        updatedAt: { lt: new Date(Date.now() - 5 * 60 * 1000) },
-      },
-      data: {
-        status: "failed",
-      },
-    }).catch(() => {});
-
-    // Auto-process any scheduled posts that have reached their scheduled time
-    const dueScheduled = rawScheduled.filter(
-      (p) => p.scheduledFor && new Date(p.scheduledFor).getTime() <= Date.now()
-    );
-
-    for (const due of dueScheduled) {
-      // 1. ATOMIC LOCK: Only ONE request can transition from "scheduled" to "publishing"
-      const claim = await prisma.instagramPostLog.updateMany({
-        where: {
-          id: due.id,
-          status: "scheduled",
-        },
-        data: {
-          status: "publishing",
-        },
-      });
-
-      if (claim.count === 0) {
-        // Already claimed by a concurrent worker/request! Skip!
-        continue;
-      }
-
-      try {
-        const postUrls = (Array.isArray(due.mediaUrls) && due.mediaUrls.length > 0)
-          ? due.mediaUrls
-          : (() => {
-              try {
-                const parsed = JSON.parse(due.mediaUrl);
-                return Array.isArray(parsed) ? parsed : [due.mediaUrl];
-              } catch {
-                return [due.mediaUrl];
-              }
-            })();
-
-        const isCarousel = due.mediaType === "CAROUSEL" || postUrls.length > 1;
-        const targetMediaType = isCarousel
-          ? "CAROUSEL"
-          : due.mediaType === "VIDEO" || due.mediaType === "REELS"
-          ? "VIDEO"
-          : "IMAGE";
-
-        const publishRes = await publishInstagramMedia({
-          instagramId: account.instagramId,
-          accessToken: account.accessToken,
-          mediaUrl: postUrls[0] || due.mediaUrl,
-          mediaUrls: postUrls,
-          caption: due.caption || "",
-          mediaType: targetMediaType,
-        });
-
-        if (publishRes.mediaId) {
-          const updated = await prisma.instagramPostLog.update({
-            where: { id: due.id },
-            data: {
-              status: "published",
-              mediaId: publishRes.mediaId,
-              permalink: publishRes.permalink || null,
-              publishedAt: new Date(),
-            },
-          });
-          publishedLogs.unshift(updated);
-        } else {
-          await prisma.instagramPostLog.update({
-            where: { id: due.id },
-            data: { status: "failed" },
-          }).catch(() => {});
-        }
-      } catch (err) {
-        console.error("Failed to auto-publish scheduled post:", err);
-        await prisma.instagramPostLog.update({
-          where: { id: due.id },
-          data: { status: "failed" },
-        }).catch(() => {});
-      }
-    }
 
     // Refresh remaining pending scheduled posts
     const activeScheduledPosts = allLocalLogs.filter(
