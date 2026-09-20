@@ -138,24 +138,28 @@ export async function fetchInstagramProfile(
   accessToken: string
 ): Promise<InstagramProfile | null> {
   const isInstagramToken = accessToken.startsWith("IG");
+  console.log(`[Instagram Profile] Fetching profile for instagramId=${instagramId}, tokenType=${isInstagramToken ? "IG" : "FB"}, tokenPrefix=${accessToken.substring(0, 10)}...`);
 
   const fieldSets = [
     "id,username,name,profile_picture_url,followers_count,follows_count,media_count,biography,website,account_type",
     "id,username,name,profile_picture_url,followers_count,follows_count,media_count,account_type",
     "id,username,name,profile_picture_url,media_count,account_type",
     "id,username,account_type,media_count,profile_picture_url",
+    "id,username,media_count",
+    "id,username",
   ];
 
   const baseEndpoints = isInstagramToken
     ? [
-        "https://graph.instagram.com/v19.0/me",
+        `https://graph.instagram.com/${instagramId}`,
         "https://graph.instagram.com/me",
-        `https://graph.instagram.com/v19.0/${instagramId}`,
         `https://graph.facebook.com/v19.0/${instagramId}`,
+        `https://graph.facebook.com/v19.0/me`,
       ]
     : [
         `https://graph.facebook.com/v19.0/${instagramId}`,
-        "https://graph.instagram.com/v19.0/me",
+        `https://graph.facebook.com/v19.0/me`,
+        `https://graph.instagram.com/${instagramId}`,
         "https://graph.instagram.com/me",
       ];
 
@@ -170,6 +174,7 @@ export async function fetchInstagramProfile(
         const data = await res.json();
 
         if (res.ok && data && (data.username || data.id)) {
+          console.log(`[Instagram Profile] Success via ${endpoint} with fields: ${fields}`);
           return {
             id: data.id || instagramId,
             username: data.username || "",
@@ -183,7 +188,7 @@ export async function fetchInstagramProfile(
             followsCount: typeof data.follows_count === "number" ? data.follows_count : null,
           };
         } else if (!res.ok) {
-          console.warn(`[Instagram Profile] ${endpoint} returned ${res.status}:`, data?.error?.message || "Unknown error");
+          console.warn(`[Instagram Profile] ${endpoint} fields=${fields.substring(0, 30)}... returned ${res.status}:`, data?.error?.message || JSON.stringify(data).substring(0, 200));
         }
       } catch (err: any) {
         console.warn(`[Instagram Profile] ${endpoint} failed:`, err?.message);
@@ -191,7 +196,7 @@ export async function fetchInstagramProfile(
     }
   }
 
-  // Fallback for Meta Graph accounts list
+  // Fallback: Meta Graph accounts list (for Facebook tokens)
   if (!isInstagramToken) {
     try {
       const fbMeUrl = new URL("https://graph.facebook.com/v19.0/me");
@@ -222,7 +227,7 @@ export async function fetchInstagramProfile(
           }
         }
       } else {
-        console.warn(`[Instagram Profile] Facebook fallback returned ${res.status}:`, data?.error?.message || "Unknown error");
+        console.warn(`[Instagram Profile] Facebook fallback returned ${res.status}:`, data?.error?.message);
       }
     } catch (err: any) {
       console.warn(`[Instagram Profile] Facebook fallback failed:`, err?.message);
@@ -361,9 +366,13 @@ export async function handleInstagramCodeExchange(code: string, redirectUri: str
   // 5. Fetch Full Profile
   const fetchedProfile = await fetchInstagramProfile(userId || "me", longLivedToken);
 
+  if (!fetchedProfile) {
+    console.error("[Instagram] Profile fetch failed after token exchange. Token may lack required scopes.");
+  }
+
   const profile: InstagramProfile = fetchedProfile || {
-    id: userId || "ig_user",
-    username: "instagram_user",
+    id: userId || "",
+    username: "",
   };
 
   return {
@@ -385,14 +394,15 @@ export async function fetchInstagramMedia(instagramId: string, accessToken: stri
   const isInstagramToken = accessToken.startsWith("IG");
   const endpoints = isInstagramToken
     ? [
-        "https://graph.instagram.com/v19.0/me/media",
+        `https://graph.instagram.com/${instagramId}/media`,
         "https://graph.instagram.com/me/media",
-        `https://graph.instagram.com/v19.0/${instagramId}/media`,
         `https://graph.facebook.com/v19.0/${instagramId}/media`,
+        `https://graph.facebook.com/v19.0/me/media`,
       ]
     : [
         `https://graph.facebook.com/v19.0/${instagramId}/media`,
-        "https://graph.instagram.com/v19.0/me/media",
+        `https://graph.facebook.com/v19.0/me/media`,
+        `https://graph.instagram.com/${instagramId}/media`,
         "https://graph.instagram.com/me/media",
       ];
 
@@ -455,14 +465,14 @@ export async function publishInstagramMedia({
   const isInstagramToken = accessToken.startsWith("IG");
   const hostEndpoints = isInstagramToken
     ? [
-        `https://graph.instagram.com/v19.0/${instagramId}`,
-        `https://graph.instagram.com/v19.0/me`,
+        `https://graph.instagram.com/${instagramId}`,
+        `https://graph.instagram.com/me`,
         `https://graph.facebook.com/v19.0/${instagramId}`,
       ]
     : [
         `https://graph.facebook.com/v19.0/${instagramId}`,
-        `https://graph.instagram.com/v19.0/${instagramId}`,
-        `https://graph.instagram.com/v19.0/me`,
+        `https://graph.instagram.com/${instagramId}`,
+        `https://graph.instagram.com/me`,
       ];
 
   const targetMediaUrls = mediaUrls && mediaUrls.length > 0 ? mediaUrls : [mediaUrl || ""];
@@ -683,7 +693,7 @@ export async function fetchInstagramComments(
   const isInstagramToken = accessToken.startsWith("IG");
   const endpoints = isInstagramToken
     ? [
-        `https://graph.instagram.com/v19.0/${mediaId}/comments`,
+        `https://graph.instagram.com/${mediaId}/comments`,
         `https://graph.instagram.com/${mediaId}/comments`,
         `https://graph.facebook.com/v19.0/${mediaId}/comments`,
         `https://graph.facebook.com/${mediaId}/comments`,
@@ -691,7 +701,7 @@ export async function fetchInstagramComments(
     : [
         `https://graph.facebook.com/v19.0/${mediaId}/comments`,
         `https://graph.facebook.com/${mediaId}/comments`,
-        `https://graph.instagram.com/v19.0/${mediaId}/comments`,
+        `https://graph.instagram.com/${mediaId}/comments`,
         `https://graph.instagram.com/${mediaId}/comments`,
       ];
 
@@ -725,13 +735,13 @@ export async function fetchInstagramComments(
   // Fallback: Query comments nested on the media object itself
   const mediaEndpoints = isInstagramToken
     ? [
-        `https://graph.instagram.com/v19.0/${mediaId}`,
+        `https://graph.instagram.com/${mediaId}`,
         `https://graph.instagram.com/${mediaId}`,
         `https://graph.facebook.com/v19.0/${mediaId}`,
       ]
     : [
         `https://graph.facebook.com/v19.0/${mediaId}`,
-        `https://graph.instagram.com/v19.0/${mediaId}`,
+        `https://graph.instagram.com/${mediaId}`,
         `https://graph.instagram.com/${mediaId}`,
       ];
 
@@ -771,7 +781,7 @@ export async function postInstagramComment({
   const targetPath = commentId ? `${commentId}/replies` : `${mediaId}/comments`;
   const endpoints = isInstagramToken
     ? [
-        `https://graph.instagram.com/v19.0/${targetPath}`,
+        `https://graph.instagram.com/${targetPath}`,
         `https://graph.instagram.com/${targetPath}`,
         `https://graph.facebook.com/v19.0/${targetPath}`,
         `https://graph.facebook.com/${targetPath}`,
@@ -779,7 +789,7 @@ export async function postInstagramComment({
     : [
         `https://graph.facebook.com/v19.0/${targetPath}`,
         `https://graph.facebook.com/${targetPath}`,
-        `https://graph.instagram.com/v19.0/${targetPath}`,
+        `https://graph.instagram.com/${targetPath}`,
         `https://graph.instagram.com/${targetPath}`,
       ];
 
@@ -817,7 +827,7 @@ export async function deleteInstagramComment(
   const isInstagramToken = accessToken.startsWith("IG");
   const endpoints = isInstagramToken
     ? [
-        `https://graph.instagram.com/v19.0/${commentId}`,
+        `https://graph.instagram.com/${commentId}`,
         `https://graph.instagram.com/${commentId}`,
         `https://graph.facebook.com/v19.0/${commentId}`,
         `https://graph.facebook.com/${commentId}`,
@@ -825,7 +835,7 @@ export async function deleteInstagramComment(
     : [
         `https://graph.facebook.com/v19.0/${commentId}`,
         `https://graph.facebook.com/${commentId}`,
-        `https://graph.instagram.com/v19.0/${commentId}`,
+        `https://graph.instagram.com/${commentId}`,
         `https://graph.instagram.com/${commentId}`,
       ];
 
@@ -857,7 +867,7 @@ export async function hideInstagramComment(
   const isInstagramToken = accessToken.startsWith("IG");
   const endpoints = isInstagramToken
     ? [
-        `https://graph.instagram.com/v19.0/${commentId}`,
+        `https://graph.instagram.com/${commentId}`,
         `https://graph.instagram.com/${commentId}`,
         `https://graph.facebook.com/v19.0/${commentId}`,
         `https://graph.facebook.com/${commentId}`,
@@ -865,7 +875,7 @@ export async function hideInstagramComment(
     : [
         `https://graph.facebook.com/v19.0/${commentId}`,
         `https://graph.facebook.com/${commentId}`,
-        `https://graph.instagram.com/v19.0/${commentId}`,
+        `https://graph.instagram.com/${commentId}`,
         `https://graph.instagram.com/${commentId}`,
       ];
 
@@ -896,7 +906,7 @@ export async function fetchInstagramMediaInsights(
   mediaType: string = "IMAGE"
 ): Promise<InstagramMediaInsight[]> {
   const isInstagramToken = accessToken.startsWith("IG");
-  const baseHost = isInstagramToken ? "https://graph.instagram.com/v19.0" : "https://graph.facebook.com/v19.0";
+  const baseHost = isInstagramToken ? "https://graph.instagram.com" : "https://graph.facebook.com/v19.0";
 
   const isVideo = mediaType === "VIDEO" || mediaType === "REELS";
   const metrics = isVideo
@@ -927,7 +937,7 @@ export async function fetchInstagramAccountInsights(
   accessToken: string
 ): Promise<any[]> {
   const isInstagramToken = accessToken.startsWith("IG");
-  const baseHost = isInstagramToken ? "https://graph.instagram.com/v19.0" : "https://graph.facebook.com/v19.0";
+  const baseHost = isInstagramToken ? "https://graph.instagram.com" : "https://graph.facebook.com/v19.0";
 
   const endpoints = isInstagramToken
     ? [`${baseHost}/me/insights`, `${baseHost}/${instagramId}/insights`]
