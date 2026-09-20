@@ -208,7 +208,7 @@ export default function GoogleDriveIndicator() {
               </div>
             )}
             <div className="min-w-0 flex-1">
-              <p className="font-semibold text-zinc-900 dark:text-zinc-100 truncate">{account?.name || "Workspace Admin Google"}</p>
+              <p className="font-semibold text-zinc-900 dark:text-zinc-100 truncate">{account?.name || "Google Account"}</p>
               <p className="text-[10px] text-zinc-500 truncate">{account?.email}</p>
             </div>
             <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">

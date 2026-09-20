@@ -1618,7 +1618,7 @@ function InstagramContent() {
 
                     <p className="text-[11px] text-zinc-800 dark:text-zinc-200 line-clamp-2">
                       <strong className="font-bold text-zinc-900 dark:text-white mr-1">
-                        {currentAccount?.username || "user"}
+                        {currentAccount?.username || ""}
                       </strong>
                       {captionInput || "Your caption text will appear here..."}
                     </p>
@@ -1768,7 +1768,7 @@ function InstagramContent() {
                         >
                           <div className="flex items-center justify-between">
                             <span className="font-bold text-zinc-900 dark:text-white">
-                              @{comment.username || "user"}
+                              @{comment.username || ""}
                             </span>
                             <span className="text-[10px] text-zinc-400">
                               {comment.timestamp ? new Date(comment.timestamp).toLocaleDateString() : ""}
@@ -1782,7 +1782,7 @@ function InstagramContent() {
                               type="button"
                               onClick={() => {
                                 setReplyToCommentId(comment.id);
-                                setNewCommentText(`@${comment.username || "user"} `);
+                                setNewCommentText(comment.username ? `@${comment.username} ` : "");
                               }}
                               className="text-[11px] font-semibold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer flex items-center gap-1"
                             >

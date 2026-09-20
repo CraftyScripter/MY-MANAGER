@@ -116,9 +116,9 @@ export async function POST(request: Request) {
     const payload = {
       fileId: String(fileId),
       tabId: tabId ? String(tabId) : null,
-      userId: user.id || "admin",
-      userName: user.name || "User",
-      userEmail: user.email || "",
+      userId: user.id,
+      userName: user.name || "",
+      userEmail: user.email,
       userRole: user.role || "member",
       message: message.trim(),
     };
@@ -128,8 +128,8 @@ export async function POST(request: Request) {
       data: {
         action: "sheet_comment",
         section: "leads",
-        userEmail: user.email || "admin@system.local",
-        userName: user.name || "Admin",
+        userEmail: user.email,
+        userName: user.name || "",
         details: JSON.stringify(payload),
       },
     });

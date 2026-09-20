@@ -398,12 +398,12 @@ export default function SettingsPage() {
                   />
                 ) : (
                   <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 border border-blue-500/30 flex items-center justify-center text-2xl font-extrabold text-white shrink-0 shadow-lg shadow-blue-500/20">
-                    {(user?.name || "U").charAt(0).toUpperCase()}
+                    {user?.name?.charAt(0)?.toUpperCase() || user?.email?.charAt(0)?.toUpperCase() || "?"}
                   </div>
                 )}
                 <div>
                   <div className="flex items-center gap-2.5 flex-wrap">
-                    <h2 className="text-lg font-bold text-zinc-900 dark:text-white tracking-tight">{user?.name || "Team Member"}</h2>
+                    <h2 className="text-lg font-bold text-zinc-900 dark:text-white tracking-tight">{user?.name || "User"}</h2>
                     <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold ${
                       isAdmin
                         ? "bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30"
