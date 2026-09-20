@@ -167,24 +167,27 @@ export async function fetchInstagramProfile(
         url.searchParams.set("access_token", accessToken);
 
         const res = await fetch(url.toString(), { cache: "no-store" });
-        if (res.ok) {
-          const data = await res.json();
-          if (data && (data.username || data.id)) {
-            return {
-              id: data.id || instagramId,
-              username: data.username || "instagram_user",
-              name: data.name || null,
-              profilePictureUrl: data.profile_picture_url || null,
-              accountType: data.account_type || null,
-              biography: data.biography || null,
-              website: data.website || null,
-              mediaCount: typeof data.media_count === "number" ? data.media_count : null,
-              followersCount: typeof data.followers_count === "number" ? data.followers_count : null,
-              followsCount: typeof data.follows_count === "number" ? data.follows_count : null,
-            };
-          }
+        const data = await res.json();
+
+        if (res.ok && data && (data.username || data.id)) {
+          return {
+            id: data.id || instagramId,
+            username: data.username || "",
+            name: data.name || null,
+            profilePictureUrl: data.profile_picture_url || null,
+            accountType: data.account_type || null,
+            biography: data.biography || null,
+            website: data.website || null,
+            mediaCount: typeof data.media_count === "number" ? data.media_count : null,
+            followersCount: typeof data.followers_count === "number" ? data.followers_count : null,
+            followsCount: typeof data.follows_count === "number" ? data.follows_count : null,
+          };
+        } else if (!res.ok) {
+          console.warn(`[Instagram Profile] ${endpoint} returned ${res.status}:`, data?.error?.message || "Unknown error");
         }
-      } catch {}
+      } catch (err: any) {
+        console.warn(`[Instagram Profile] ${endpoint} failed:`, err?.message);
+      }
     }
   }
 
@@ -198,15 +201,16 @@ export async function fetchInstagramProfile(
       );
       fbMeUrl.searchParams.set("access_token", accessToken);
       const res = await fetch(fbMeUrl.toString(), { cache: "no-store" });
+      const data = await res.json();
+
       if (res.ok) {
-        const data = await res.json();
         const pages = data.accounts?.data || [];
         for (const page of pages) {
           if (page.instagram_business_account) {
             const ig = page.instagram_business_account;
             return {
               id: ig.id,
-              username: ig.username || page.name,
+              username: ig.username || "",
               name: ig.name || page.name,
               profilePictureUrl: ig.profile_picture_url || null,
               biography: ig.biography || null,
@@ -217,10 +221,15 @@ export async function fetchInstagramProfile(
             };
           }
         }
+      } else {
+        console.warn(`[Instagram Profile] Facebook fallback returned ${res.status}:`, data?.error?.message || "Unknown error");
       }
-    } catch {}
+    } catch (err: any) {
+      console.warn(`[Instagram Profile] Facebook fallback failed:`, err?.message);
+    }
   }
 
+  console.error(`[Instagram Profile] All profile fetch attempts failed for instagramId=${instagramId}, tokenType=${isInstagramToken ? "IG" : "FB"}`);
   return null;
 }
 

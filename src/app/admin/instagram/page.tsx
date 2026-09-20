@@ -1546,12 +1546,12 @@ function InstagramContent() {
                           {currentAccount?.profilePictureUrl ? (
                             <img src={currentAccount.profilePictureUrl} alt="avatar" className="w-full h-full object-cover" />
                           ) : (
-                            currentAccount?.username?.charAt(0) || "U"
+                            currentAccount?.username?.charAt(0) || "?"
                           )}
                         </div>
                       </div>
                       <span className="text-xs font-bold">
-                        {currentAccount?.username || "instagram_user"}
+                        {currentAccount?.username ? `@${currentAccount.username}` : "Not connected"}
                       </span>
                     </div>
                     <span className="text-zinc-400 text-xs font-bold tracking-widest">•••</span>
@@ -1661,7 +1661,7 @@ function InstagramContent() {
                   </div>
                   <div>
                     <p className="text-sm font-bold text-zinc-900 dark:text-white leading-tight">
-                      @{currentAccount?.username || "instagram_user"}
+                      {currentAccount?.username ? `@${currentAccount.username}` : "Account not connected"}
                     </p>
                     <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-tight mt-0.5">
                       {viewingPost.timestamp ? new Date(viewingPost.timestamp).toLocaleString() : ""}
