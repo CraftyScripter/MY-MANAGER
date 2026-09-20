@@ -47,12 +47,6 @@ export async function GET(request: NextRequest) {
         redirectUri
       );
 
-      console.log("[Instagram Callback] Direct IG exchange successful:", { username: profile.username, id: profile.id });
-
-      if (!profile.username) {
-        console.error("[Instagram Callback] Profile fetched but username is empty. Token may lack instagram_basic or instagram_business_basic scope.");
-      }
-
       await prisma.instagramAccount.upsert({
         where: { instagramId: profile.id },
         create: {
@@ -94,7 +88,7 @@ export async function GET(request: NextRequest) {
       redirectUrl.searchParams.set("username", profile.username);
       return NextResponse.redirect(redirectUrl.toString());
     } catch (directError: any) {
-      console.warn("[Instagram Callback] Direct IG exchange failed, trying Facebook Pages fallback:", directError?.message);
+      console.warn("Direct Instagram code exchange error, trying Facebook Pages fallback:", directError?.message);
     }
 
     // 2. Fallback to Facebook Pages & Instagram Business account flow
@@ -137,17 +131,13 @@ export async function GET(request: NextRequest) {
     const pagesData = await pagesRes.json();
     const pages = pagesData.data || [];
 
-    console.log("[Instagram Callback] Facebook Pages fallback: found", pages.length, "pages");
-
     let connectedUsername = "";
     for (const page of pages) {
       if (page.instagram_business_account?.id) {
         const ig = page.instagram_business_account;
         const pageToken = page.access_token || accessToken;
-        const username = ig.username || "";
+        const username = ig.username || "instagram_user";
         connectedUsername = username;
-
-        console.log("[Instagram Callback] Found IG business account:", { username, id: ig.id, pageName: page.name });
 
         await prisma.instagramAccount.upsert({
           where: { instagramId: ig.id },
