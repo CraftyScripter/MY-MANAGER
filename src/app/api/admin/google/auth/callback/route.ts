@@ -144,16 +144,7 @@ export async function POST(request: Request) {
         console.warn("Initial drive backup completed with warning:", backupErr);
       });
 
-      // Log activity
-      prisma.activityLog.create({
-        data: {
-          action: "GOOGLE_ACCOUNT_CONNECTED",
-          userEmail: profile.email,
-          userName: profile.name,
-          section: "Google Drive & Sheets",
-          details: `Connected Google account ${profile.email} with Drive folder MyManager_AppData`,
-        },
-      }).catch(() => {});
+      // Account setup event — not logged to activity log (not a meaningful audit event)
 
       return {
         success: true,

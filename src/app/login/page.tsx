@@ -51,6 +51,19 @@ function LoginForm() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
 
+  // Reset loading when user returns to this page (e.g. after cancelling Google OAuth)
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") setLoading(false);
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
+    window.addEventListener("focus", () => setLoading(false));
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibility);
+      window.removeEventListener("focus", () => setLoading(false));
+    };
+  }, []);
+
   const handleGoogleLogin = async () => {
     setLoading(true);
     setError("");
@@ -60,7 +73,7 @@ function LoginForm() {
       if (data.authUrl) {
         window.location.href = data.authUrl;
       } else {
-        setError(data.error || "Google Sign In is currently unavailable");
+        setError("Unable to sign in with Google at the moment. Please try again later.");
         setLoading(false);
       }
     } catch {
@@ -90,7 +103,7 @@ function LoginForm() {
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.error || "Invalid credentials");
+        setError("Unable to sign in. Please check your credentials and try again.");
         setLoading(false);
         return;
       }

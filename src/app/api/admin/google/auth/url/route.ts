@@ -11,7 +11,7 @@ export async function GET(request: Request) {
     if (!clientId) {
       return NextResponse.json(
         {
-          error: "Google Client ID is not configured. Please set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET in .env",
+          error: "Google Sign In is temporarily unavailable. Please try again later.",
         },
         { status: 400 }
       );
@@ -21,7 +21,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ authUrl, success: true });
   } catch (error: any) {
     return NextResponse.json(
-      { error: error?.message || "Failed to generate Google Auth URL" },
+      { error: "Unable to connect to Google. Please try again." },
       { status: 500 }
     );
   }

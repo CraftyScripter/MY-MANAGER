@@ -1,12 +1,25 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import ThemeToggle from "@/components/ThemeToggle";
 
 export default function SignupPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  // Reset loading when user returns to this page (e.g. after cancelling Google OAuth)
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") setLoading(false);
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
+    window.addEventListener("focus", () => setLoading(false));
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibility);
+      window.removeEventListener("focus", () => setLoading(false));
+    };
+  }, []);
 
   const handleGoogleSignup = async () => {
     setLoading(true);
@@ -17,7 +30,7 @@ export default function SignupPage() {
       if (data.authUrl) {
         window.location.href = data.authUrl;
       } else {
-        setError(data.error || "Failed to initialize Google Onboarding");
+        setError("Unable to start sign up at the moment. Please try again later.");
         setLoading(false);
       }
     } catch {
