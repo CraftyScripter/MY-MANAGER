@@ -41,6 +41,7 @@ export async function GET() {
       formSubmissions,
       googleAccount,
       appointments,
+      workspaceOwner,
       teamMembers,
     ] = await Promise.all([
       // Promise Me enquiries (last 7 days)
@@ -137,11 +138,22 @@ export async function GET() {
         },
       }).catch(() => []),
 
-      // New team members (last 7 days)
+      // Workspace owner (first admin) — only they should see team join notifications
+      prisma.user.findFirst({
+        orderBy: { createdAt: "asc" },
+        where: { role: "admin" },
+        select: { id: true },
+      }).catch(() => null),
+
+      // New team members (last 7 days) — exclude the logged-in user and admins
       prisma.user.findMany({
-        where: { createdAt: { gte: last7days } },
+        where: {
+          createdAt: { gte: last7days },
+          id: { not: user.id },
+          role: { notIn: ["admin", "ADMIN"] },
+        },
         orderBy: { createdAt: "desc" },
-        take: 3,
+        take: 5,
         select: {
           id: true,
           name: true,
@@ -227,16 +239,18 @@ export async function GET() {
       });
     }
 
-    // Team Members
-    for (const m of teamMembers) {
-      notifications.push({
-        id: `team-${m.id}`,
-        title: "New Team Member",
-        description: `${m.name} (${m.email}) joined as ${m.role}`,
-        timestamp: m.createdAt.toISOString(),
-        type: "team",
-        href: "/admin/team",
-      });
+    // Team Members — only show to workspace owner
+    if (workspaceOwner && user.id === workspaceOwner.id) {
+      for (const m of teamMembers) {
+        notifications.push({
+          id: `team-${m.id}`,
+          title: "New Team Member",
+          description: `${m.name} (${m.email}) joined as ${m.role}`,
+          timestamp: m.createdAt.toISOString(),
+          type: "team",
+          href: "/admin/team",
+        });
+      }
     }
 
     // Backup reminder (if no backup in last 3 days)
