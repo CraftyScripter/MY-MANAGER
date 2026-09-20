@@ -78,6 +78,9 @@ export const metadata: Metadata = {
   alternates: {
     canonical: "https://my-manager-eight.vercel.app",
   },
+  verification: {
+    google: "h5gLykqBftTwAeAXIS8OzfzpFAZ3aBwkIRXAwRMA2oU",
+  },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
