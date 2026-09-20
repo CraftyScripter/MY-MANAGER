@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
-import { getValidGoogleAccount } from "@/lib/google";
+import { getWorkspaceAdminGoogleAccount } from "@/lib/google";
 import {
   parseSpreadsheetId,
   getSpreadsheetMetadata,
@@ -12,14 +12,17 @@ import { broadcastGlobal } from "@/lib/sync-events";
 export async function GET(request: Request) {
   try {
     const user = await getCurrentUser();
-    const userId = user?.id || "admin";
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    const workspaceAdminId = user.workspaceId || user.id;
 
     const { searchParams } = new URL(request.url);
     const fileId = searchParams.get("fileId");
 
     let links = await prisma.googleSheetLink.findMany({
       where: {
-        userId,
+        userId: workspaceAdminId,
       },
       orderBy: { updatedAt: "desc" },
     });
@@ -49,7 +52,7 @@ export async function GET(request: Request) {
 
       // Let syncFromGoogleSheet create the file and populate it
       try {
-        await syncFromGoogleSheet(userId, link.id);
+        await syncFromGoogleSheet(workspaceAdminId, link.id);
       } catch (e: any) {
         console.warn(`[auto-fix] Sync failed for link ${link.id} (${link.spreadsheetName}):`, e?.message);
       }
@@ -57,18 +60,36 @@ export async function GET(request: Request) {
 
     if (fixed) {
       links = await prisma.googleSheetLink.findMany({
-        where: { userId },
+        where: { userId: workspaceAdminId },
         orderBy: { updatedAt: "desc" },
       });
     }
 
+    const fileIds = links.map((l) => l.fileId).filter(Boolean) as string[];
+    const files = await prisma.leadFile.findMany({
+      where: { id: { in: fileIds } },
+      include: {
+        folder: { select: { id: true, name: true, color: true } },
+        _count: { select: { tabs: true } },
+        tabs: {
+          include: { _count: { select: { leads: true } } },
+          orderBy: { sortOrder: "asc" },
+        },
+      },
+    });
+    const fileMap = new Map(files.map((f) => [f.id, f]));
+    const enrichedLinks = links.map((l) => ({
+      ...l,
+      file: l.fileId ? fileMap.get(l.fileId) || null : null,
+    }));
+
     // Only return an activeLink if it specifically belongs to the requested fileId
     const activeLink = fileId
-      ? links.find((l) => l.fileId === fileId) || null
-      : links[0] || null;
+      ? enrichedLinks.find((l) => l.fileId === fileId) || null
+      : enrichedLinks[0] || null;
 
     return NextResponse.json({
-      links,
+      links: enrichedLinks,
       activeLink,
       success: true,
     });
@@ -83,9 +104,12 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const user = await getCurrentUser();
-    const userId = user?.id || "admin";
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    const workspaceAdminId = user.workspaceId || user.id;
 
-    const account = await getValidGoogleAccount(userId);
+    const account = await getWorkspaceAdminGoogleAccount(workspaceAdminId);
     if (!account) {
       return NextResponse.json(
         { error: "Please connect your Google account first before linking a Google Sheet." },
@@ -113,7 +137,7 @@ export async function POST(request: Request) {
     // 2. Create or update GoogleSheetLink record
     let link = await prisma.googleSheetLink.findFirst({
       where: {
-        userId,
+        userId: workspaceAdminId,
         spreadsheetId,
       },
     });
@@ -135,7 +159,7 @@ export async function POST(request: Request) {
     } else {
       link = await prisma.googleSheetLink.create({
         data: {
-          userId,
+          userId: workspaceAdminId,
           spreadsheetId,
           spreadsheetName: metadata.title,
           sheetName,
@@ -151,7 +175,7 @@ export async function POST(request: Request) {
     // 3. Immediately trigger initial 2-way sync
     let syncResult = null;
     try {
-      syncResult = await syncFromGoogleSheet(userId, link.id);
+      syncResult = await syncFromGoogleSheet(workspaceAdminId, link.id);
     } catch (syncErr: any) {
       console.warn("Initial sync error:", syncErr);
     }
@@ -179,7 +203,10 @@ export async function POST(request: Request) {
 export async function PUT(request: Request) {
   try {
     const user = await getCurrentUser();
-    const userId = user?.id || "admin";
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    const workspaceAdminId = user.workspaceId || user.id;
 
     const body = await request.json();
     const { linkId } = body;
@@ -188,7 +215,7 @@ export async function PUT(request: Request) {
       return NextResponse.json({ error: "Missing linkId parameter" }, { status: 400 });
     }
 
-    const syncResult = await syncFromGoogleSheet(userId, linkId);
+    const syncResult = await syncFromGoogleSheet(workspaceAdminId, linkId);
     const updatedLink = await prisma.googleSheetLink.findUnique({
       where: { id: linkId },
     });
@@ -211,7 +238,10 @@ export async function PUT(request: Request) {
 export async function DELETE(request: Request) {
   try {
     const user = await getCurrentUser();
-    const userId = user?.id || "admin";
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    const workspaceAdminId = user.workspaceId || user.id;
 
     const { searchParams } = new URL(request.url);
     const linkId = searchParams.get("linkId");
@@ -225,7 +255,7 @@ export async function DELETE(request: Request) {
     });
 
     await prisma.googleSheetLink.deleteMany({
-      where: { id: linkId, userId },
+      where: { id: linkId, userId: workspaceAdminId },
     });
 
     if (link?.fileId) {

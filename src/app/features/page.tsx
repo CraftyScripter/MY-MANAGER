@@ -25,7 +25,7 @@ export default function FeaturesPage() {
       tag: "CORE CRM ENGINE",
       title: "Google Sheets 2-Way Live Sync & Cell Merging",
       description:
-        "Never perform manual CSV exports or imports again. Any lead, status update, deal value, or note edited in My Manager instantly syncs to your Google Sheet in less than 150ms — and edits made directly inside Google Sheets appear inside My Manager in real-time.",
+        "Never perform manual CSV exports or imports again. Any row, status update, deal value, or note edited in My Manager instantly syncs to your Google Sheet in less than 150ms — and edits made directly inside Google Sheets appear inside My Manager in real-time.",
       highlights: [
         "Bidirectional sync with zero latency spikes (<150ms)",
         "Advanced cell merging support for complex agency agency spreadsheets",
@@ -85,7 +85,7 @@ export default function FeaturesPage() {
       tag: "LEAD ENRICHMENT & SECURITY",
       title: "Smart Forms with Automated MX Domain Verification",
       description:
-        "Stop spam leads and fake email addresses before they enter your CRM. When prospective clients submit forms or book appointments, our background engine executes automated DNS MX record lookups to verify domain deliverability and highlight high-intent enterprise prospects.",
+        "Stop spam entries and fake email addresses before they enter your CRM. When prospective clients submit forms or book appointments, our background engine executes automated DNS MX record lookups to verify domain deliverability and highlight high-intent enterprise prospects.",
       highlights: [
         "Instant MX record validation for prospective client domains",
         "Automatic spam and disposable email filtering",

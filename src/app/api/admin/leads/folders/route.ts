@@ -16,8 +16,12 @@ interface FolderWithCounts {
 }
 
 async function buildFolderTree(parentId: string | null): Promise<FolderWithCounts[]> {
+  const where = parentId
+    ? { parentId }
+    : { OR: [{ parentId: null }, { parentId: { isSet: false } }] };
+
   const folders = await prisma.leadFolder.findMany({
-    where: { parentId },
+    where,
     include: {
       _count: { select: { children: true, files: true } },
     },
@@ -41,8 +45,17 @@ export async function GET(request: Request) {
 
   try {
     const rootFolders = await buildFolderTree(null);
+
+    const rootFilesWhere: Record<string, unknown> = {
+      OR: [{ folderId: null }, { folderId: { isSet: false } }],
+    };
+
+    if (user.role !== "admin") {
+      rootFilesWhere.NOT = { hiddenMemberIds: { has: user.id } };
+    }
+
     const rootFiles = await prisma.leadFile.findMany({
-      where: { folderId: null },
+      where: rootFilesWhere,
       include: {
         _count: { select: { tabs: true } },
         tabs: {

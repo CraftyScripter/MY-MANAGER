@@ -6,10 +6,10 @@ import { prisma } from "@/lib/prisma";
 export async function GET() {
   try {
     const user = await getCurrentUser();
-    const userId = user?.id || "admin";
-    const isAdmin = !user || user.role === "admin";
+    const workspaceAdminId = user?.workspaceId || user?.id || "admin";
+    const isAdmin = Boolean(user?.role === "admin" && !user?.workspaceId);
 
-    const account = await getWorkspaceAdminGoogleAccount(userId);
+    const account = await getWorkspaceAdminGoogleAccount(workspaceAdminId);
 
     if (!account) {
       return NextResponse.json({
@@ -20,7 +20,9 @@ export async function GET() {
       });
     }
 
-    const sheetLinksCount = await prisma.googleSheetLink.count();
+    const sheetLinksCount = await prisma.googleSheetLink.count({
+      where: { userId: workspaceAdminId },
+    });
 
     return NextResponse.json({
       connected: true,

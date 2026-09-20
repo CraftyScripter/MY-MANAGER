@@ -96,6 +96,7 @@ export default function AdminPage() {
   const [timeRange, setTimeRange] = useState("30d");
   const [teamSearch, setTeamSearch] = useState("");
   const [toast, setToast] = useState<{ type: "success" | "error"; message: string } | null>(null);
+  const [currentUser, setCurrentUser] = useState<{ role: string; name?: string; email?: string } | null>(null);
 
   const timeRangeOptions = [
     { label: "Last 7 Days", value: "7d" },
@@ -129,6 +130,10 @@ export default function AdminPage() {
   };
 
   useEffect(() => {
+    fetch("/api/admin/auth/me")
+      .then((r) => r.json())
+      .then((d) => { if (d.user) setCurrentUser(d.user); })
+      .catch(() => {});
     fetchDashboardData(false);
 
     // 1. Silent background poll every 15 seconds
@@ -216,6 +221,25 @@ export default function AdminPage() {
               </svg>
             </span>
             Executive Dashboard
+            {currentUser && (
+              <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-bold uppercase tracking-wider border ${
+                currentUser.role === "admin"
+                  ? "bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20"
+                  : "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20"
+              }`}>
+                {currentUser.role === "admin" ? (
+                  <>
+                    <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10.868 2.884c-.321-.772-1.415-.772-1.736 0l-1.83 4.401-4.753.381c-.833.067-1.171 1.107-.536 1.651l3.62 3.102 1.106 4.637c.12.513-.453.913-.875.67L4.5 14.127l-3.973 2.134c-.453.245-1.002-.134-.885-.64l1.05-4.496L.393 9.473c-.656-.563-.306-1.535.53-1.602l4.753-.381 1.83-4.401z" clipRule="evenodd" /></svg>
+                    Admin
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" /></svg>
+                    Team Member
+                  </>
+                )}
+              </span>
+            )}
           </h1>
           <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
             Real-time cross-workspace analytics, operational telemetry, and financial performance.
@@ -581,7 +605,7 @@ export default function AdminPage() {
         </div>
 
         {/* Card 3: Real Team Status */}
-        <div className="p-5 bg-white dark:bg-[#111114] border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-xs flex flex-col justify-between">
+        <div className="p-5 bg-white dark:bg-[#111114] border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-xs flex flex-col">
           <div>
             <div className="flex items-center justify-between">
               <h2 className="text-sm font-bold text-zinc-900 dark:text-white">Team Status</h2>
@@ -594,8 +618,8 @@ export default function AdminPage() {
             </p>
           </div>
 
-          <div className="py-3 flex-1 flex flex-col justify-between">
-            <div className="relative mb-2">
+          <div className="py-3 space-y-2.5">
+            <div className="relative">
               <input
                 type="text"
                 value={teamSearch}

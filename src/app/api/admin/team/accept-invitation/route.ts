@@ -14,6 +14,39 @@ export async function GET(request: Request) {
       );
     }
 
+    // Check WorkspaceMembership invitation first
+    const membership = await prisma.workspaceMembership.findFirst({
+      where: { invitationToken: token },
+      select: {
+        id: true,
+        isActive: true,
+        invitationExpires: true,
+        user: {
+          select: { id: true, name: true, email: true },
+        },
+      },
+    });
+
+    if (membership) {
+      if (membership.isActive) {
+        return NextResponse.json(
+          { error: "This invitation has already been used" },
+          { status: 400 }
+        );
+      }
+      if (membership.invitationExpires && new Date() > membership.invitationExpires) {
+        return NextResponse.json(
+          { error: "This invitation has expired" },
+          { status: 400 }
+        );
+      }
+      return NextResponse.json({
+        valid: true,
+        user: { name: membership.user.name, email: membership.user.email },
+      });
+    }
+
+    // Fallback: check legacy User invitation
     const user = await prisma.user.findFirst({
       where: { invitationToken: token },
       select: {
@@ -94,6 +127,58 @@ export async function POST(request: Request) {
       );
     }
 
+    const passwordHash = await hashPassword(password);
+
+    // Check WorkspaceMembership invitation first
+    const membership = await prisma.workspaceMembership.findFirst({
+      where: { invitationToken: token },
+      select: {
+        id: true,
+        isActive: true,
+        invitationExpires: true,
+        userId: true,
+      },
+    });
+
+    if (membership) {
+      if (membership.isActive) {
+        return NextResponse.json(
+          { error: "This invitation has already been used" },
+          { status: 400 }
+        );
+      }
+      if (membership.invitationExpires && new Date() > membership.invitationExpires) {
+        return NextResponse.json(
+          { error: "This invitation has expired" },
+          { status: 400 }
+        );
+      }
+
+      // Activate membership + set password + activate user
+      await prisma.workspaceMembership.update({
+        where: { id: membership.id },
+        data: {
+          isActive: true,
+          invitationToken: null,
+          invitationExpires: null,
+        },
+      });
+
+      await prisma.user.update({
+        where: { id: membership.userId },
+        data: {
+          passwordHash,
+          isActive: true,
+        },
+      });
+
+      return NextResponse.json({
+        success: true,
+        message: "Account activated successfully. You can now log in.",
+      });
+    }
+
+    // Fallback: legacy User invitation
     const user = await prisma.user.findFirst({
       where: { invitationToken: token },
       select: {
@@ -124,8 +209,6 @@ export async function POST(request: Request) {
       );
     }
 
-    const passwordHash = await hashPassword(password);
-
     await prisma.user.update({
       where: { id: user.id },
       data: {
@@ -150,7 +233,7 @@ export async function POST(request: Request) {
     return NextResponse.json(
       {
         error: isTimeout
-          ? "Database connection timed out. Please try again shortly."
+          ? "Database connection timed out. Please check your network and try again shortly."
           : "Internal server error",
       },
       { status: isTimeout ? 504 : 500 }

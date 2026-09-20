@@ -24,7 +24,7 @@ export default function FileList({ files, onClick, onEdit, onMove, onDelete, del
             <tr className="border-b border-zinc-200 dark:border-zinc-800 bg-slate-50 dark:bg-transparent">
               <th className="text-left px-6 py-3 font-medium text-zinc-600 dark:text-zinc-500">Name</th>
               <th className="text-left px-6 py-3 font-medium text-zinc-600 dark:text-zinc-500">Tabs</th>
-              <th className="text-left px-6 py-3 font-medium text-zinc-600 dark:text-zinc-500">Leads</th>
+              <th className="text-left px-6 py-3 font-medium text-zinc-600 dark:text-zinc-500">Rows</th>
               <th className="text-left px-6 py-3 font-medium text-zinc-600 dark:text-zinc-500">Created</th>
               <th className="text-right px-6 py-3 font-medium text-zinc-600 dark:text-zinc-500">Actions</th>
             </tr>

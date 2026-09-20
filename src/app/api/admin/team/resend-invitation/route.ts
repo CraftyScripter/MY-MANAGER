@@ -25,24 +25,32 @@ export async function POST(request: Request) {
       );
     }
 
-    const targetUser = await prisma.user.findUnique({
-      where: { id: userId },
+    // Find the workspace membership for this user
+    const membership = await prisma.workspaceMembership.findUnique({
+      where: {
+        workspaceId_userId: {
+          workspaceId: user.id,
+          userId,
+        },
+      },
       select: {
         id: true,
-        name: true,
-        email: true,
         isActive: true,
+        permissions: true,
+        user: {
+          select: { id: true, name: true, email: true },
+        },
       },
     });
 
-    if (!targetUser) {
+    if (!membership) {
       return NextResponse.json(
         { error: "Team member not found" },
         { status: 404 }
       );
     }
 
-    if (targetUser.isActive) {
+    if (membership.isActive) {
       return NextResponse.json(
         { error: "This user has already activated their account" },
         { status: 400 }
@@ -52,8 +60,8 @@ export async function POST(request: Request) {
     const invitationToken = generateInvitationToken();
     const invitationExpires = getInvitationExpiry();
 
-    await prisma.user.update({
-      where: { id: userId },
+    await prisma.workspaceMembership.update({
+      where: { id: membership.id },
       data: {
         invitationToken,
         invitationExpires,
@@ -63,10 +71,22 @@ export async function POST(request: Request) {
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
     const invitationLink = `${appUrl}/accept-invitation?token=${invitationToken}`;
 
+    // Fetch inviter info for email
+    const inviter = await prisma.user.findUnique({
+      where: { id: user.id },
+      select: { name: true, email: true },
+    });
+
     await sendInvitationEmail(
-      targetUser.email,
-      targetUser.name,
-      invitationLink
+      membership.user.email,
+      membership.user.name,
+      invitationLink,
+      {
+        inviterName: inviter?.name || "Admin",
+        inviterEmail: inviter?.email,
+        permissions: membership.permissions,
+        workspaceName: inviter?.name ? `${inviter.name}'s Workspace` : undefined,
+      }
     );
 
     return NextResponse.json({

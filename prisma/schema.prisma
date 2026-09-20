@@ -52,6 +52,7 @@ model LeadFile {
   folderId    String?
   name        String
   description String?
+  hiddenMemberIds String[] @default([]) // Member IDs to hide this file from (empty = visible to all)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -300,7 +301,29 @@ model User {
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
 
+  memberships       WorkspaceMembership[]
+
   @@index([role])
+  @@index([invitationToken])
+}
+
+model WorkspaceMembership {
+  id            String   @id @default(cuid()) @map("_id")
+  workspaceId   String   // Admin B ka user ID (workspace owner)
+  userId        String   // Account A ka user ID
+  role          String   @default("member")  // "member", "manager"
+  permissions   String[]
+  isActive      Boolean  @default(false)
+  invitationToken   String?
+  invitationExpires DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, userId])
+  @@index([workspaceId])
+  @@index([userId])
   @@index([invitationToken])
 }
 

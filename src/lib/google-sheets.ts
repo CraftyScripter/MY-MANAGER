@@ -1,5 +1,5 @@
 import { prisma } from "./prisma";
-import { getValidGoogleAccount } from "./google";
+import { getValidGoogleAccount, getWorkspaceAdminGoogleAccount } from "./google";
 import type { Prisma } from "@prisma/client";
 
 export interface SheetHeaderMapping {
@@ -305,17 +305,20 @@ export async function ensureSheetHeaders(
  * Supports multi-tab sheets, dynamic column detection (ENV tables, custom data, lead records).
  */
 export async function syncFromGoogleSheet(userId: string, linkId: string) {
-  const account = await getValidGoogleAccount(userId);
-  if (!account) {
-    throw new Error("Google account not connected");
-  }
-
   const link = await prisma.googleSheetLink.findUnique({
     where: { id: linkId },
   });
 
   if (!link) {
     throw new Error("Google Sheet link not found");
+  }
+
+  const accountUserId = link.userId || userId;
+  const account =
+    (await getWorkspaceAdminGoogleAccount(accountUserId)) ||
+    (await getValidGoogleAccount(accountUserId));
+  if (!account) {
+    throw new Error("Google account not connected");
   }
 
   // Update status to syncing
@@ -356,6 +359,7 @@ export async function syncFromGoogleSheet(userId: string, linkId: string) {
         data: {
           name: spreadsheetTitle,
           description: `Google Sheet (Live Sync) • ${metadata.sheets.length} tabs`,
+          folderId: null,
         },
       });
     } else {
@@ -587,7 +591,9 @@ export async function pushLeadToGoogleSheet(
   }
 ) {
   try {
-    const account = await getValidGoogleAccount(userId);
+    const account =
+      (await getWorkspaceAdminGoogleAccount(userId)) ||
+      (await getValidGoogleAccount(userId));
     if (!account) return;
 
     const tab = await prisma.leadTab.findUnique({

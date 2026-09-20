@@ -60,6 +60,7 @@ export default function LinkGoogleSheetModal({
   const [googleAccount, setGoogleAccount] = useState<GoogleAccountInfo | null>(null);
   const [googleConnected, setGoogleConnected] = useState(true);
   const [hasDriveScope, setHasDriveScope] = useState(true);
+  const [isWorkspaceAdmin, setIsWorkspaceAdmin] = useState(true);
   const [feedback, setFeedback] = useState<{ text: string; type: "success" | "error" } | null>(null);
   const [unlinkingLink, setUnlinkingLink] = useState<GoogleSheetLinkItem | null>(null);
   const [isUnlinking, setIsUnlinking] = useState(false);
@@ -116,6 +117,9 @@ export default function LinkGoogleSheetModal({
         setDriveSheets(data.spreadsheets || []);
         setGoogleConnected(true);
         setHasDriveScope(data.hasDriveScope ?? true);
+        if (data.isAdmin !== undefined) {
+          setIsWorkspaceAdmin(data.isAdmin);
+        }
         if (data.account) {
           setGoogleAccount(data.account);
         }
@@ -322,21 +326,25 @@ export default function LinkGoogleSheetModal({
               <div className="flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-amber-500" />
                 <span className="text-xs font-medium text-zinc-600 dark:text-zinc-300">
-                  Google account not connected
+                  {isWorkspaceAdmin
+                    ? "Google account not connected"
+                    : "Google account not connected by Workspace Administrator"}
                 </span>
               </div>
-              <button
-                onClick={() => handleConnectGoogle("consent")}
-                className="px-3 py-1 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-semibold shadow-xs cursor-pointer"
-              >
-                Sign in with Google
-              </button>
+              {isWorkspaceAdmin && (
+                <button
+                  onClick={() => handleConnectGoogle("consent")}
+                  className="px-3 py-1 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-semibold shadow-xs cursor-pointer"
+                >
+                  Sign in with Google
+                </button>
+              )}
             </div>
           )}
 
           {googleConnected && (
             <div className="flex items-center gap-1.5 shrink-0">
-              {!hasDriveScope && (
+              {!hasDriveScope && isWorkspaceAdmin && (
                 <button
                   onClick={() => handleConnectGoogle("consent")}
                   className="px-2.5 py-1 text-[11px] font-bold text-amber-700 dark:text-amber-300 bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 rounded-lg transition cursor-pointer flex items-center gap-1"
@@ -347,13 +355,6 @@ export default function LinkGoogleSheetModal({
                   <span>Grant Drive Access</span>
                 </button>
               )}
-              <button
-                onClick={() => handleConnectGoogle("consent")}
-                className="px-2 py-1 text-[11px] font-medium text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 hover:bg-zinc-200/60 dark:hover:bg-zinc-800 rounded-lg transition cursor-pointer"
-                title="Switch account or grant new permissions"
-              >
-                Switch
-              </button>
               <button
                 onClick={() => {
                   fetchDriveSheets();

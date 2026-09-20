@@ -5,7 +5,13 @@ import { prisma } from "@/lib/prisma";
 export async function POST() {
   try {
     const user = await getCurrentUser();
-    const userId = user?.id || "admin";
+    if (!user || user.role !== "admin" || user.workspaceId) {
+      return NextResponse.json(
+        { error: "Only workspace administrators can disconnect Google accounts" },
+        { status: 403 }
+      );
+    }
+    const userId = user.id;
 
     await prisma.googleSheetLink.deleteMany({
       where: { userId },

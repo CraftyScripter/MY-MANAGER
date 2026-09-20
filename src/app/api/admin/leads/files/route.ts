@@ -20,7 +20,17 @@ export async function GET(request: Request) {
     if (folderId) {
       where.folderId = folderId;
     } else {
-      where.folderId = null;
+      where.OR = [{ folderId: null }, { folderId: { isSet: false } }];
+    }
+
+    // For team members (non-admin), filter out hidden files
+    if (user.role !== "admin") {
+      // Exclude files where user's ID is in hiddenMemberIds
+      const existingAnd = (where.AND as unknown[]) || [];
+      where.AND = [
+        ...existingAnd,
+        { NOT: { hiddenMemberIds: { has: user.id } } },
+      ];
     }
 
     const files = await prisma.leadFile.findMany({
@@ -86,7 +96,8 @@ export async function POST(request: Request) {
     // If syncWithGoogleSheet is enabled, create spreadsheet on Google Drive and link it
     if (syncWithGoogleSheet) {
       try {
-        const account = await getWorkspaceAdminGoogleAccount(user.id);
+        const workspaceAdminId = user.workspaceId || user.id;
+        const account = await getWorkspaceAdminGoogleAccount(workspaceAdminId);
         if (account && account.accessToken) {
           const newSheet = await createGoogleSpreadsheet(
             account.accessToken,
@@ -99,7 +110,7 @@ export async function POST(request: Request) {
 
           await prisma.googleSheetLink.create({
             data: {
-              userId: user.id || "admin",
+              userId: workspaceAdminId,
               fileId: file.id,
               tabId: tab.id,
               spreadsheetId: newSheet.spreadsheetId,

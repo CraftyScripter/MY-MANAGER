@@ -14,27 +14,52 @@ export async function GET(
     }
 
     const { id } = await params;
-    const member = await prisma.user.findUnique({
-      where: { id },
+
+    // Find membership for this user in this workspace
+    const membership = await prisma.workspaceMembership.findUnique({
+      where: {
+        workspaceId_userId: {
+          workspaceId: user.id,
+          userId: id,
+        },
+      },
       select: {
         id: true,
-        name: true,
-        email: true,
-        phone: true,
         role: true,
         permissions: true,
         isActive: true,
         createdAt: true,
         updatedAt: true,
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            phone: true,
+          },
+        },
       },
     });
 
-    if (!member) {
+    if (!membership) {
       return NextResponse.json(
         { error: "Team member not found" },
         { status: 404 }
       );
     }
+
+    const member = {
+      id: membership.user.id,
+      membershipId: membership.id,
+      name: membership.user.name,
+      email: membership.user.email,
+      phone: membership.user.phone,
+      role: membership.role,
+      permissions: membership.permissions,
+      isActive: membership.isActive,
+      createdAt: membership.createdAt,
+      updatedAt: membership.updatedAt,
+    };
 
     return NextResponse.json({ member });
   } catch (error) {
@@ -60,20 +85,26 @@ export async function PUT(
     const body = await request.json();
     const { name, email, phone, permissions } = body;
 
-    const existing = await prisma.user.findUnique({
-      where: { id },
-      select: { id: true, email: true },
+    // Find membership for this user in this workspace
+    const membership = await prisma.workspaceMembership.findUnique({
+      where: {
+        workspaceId_userId: {
+          workspaceId: user.id,
+          userId: id,
+        },
+      },
+      select: { id: true, user: { select: { email: true } } },
     });
 
-    if (!existing) {
+    if (!membership) {
       return NextResponse.json(
         { error: "Team member not found" },
         { status: 404 }
       );
     }
 
-    const updateData: Record<string, unknown> = {};
-
+    // Update user details (name, email, phone)
+    const userUpdateData: Record<string, unknown> = {};
     if (name !== undefined) {
       if (typeof name !== "string" || name.trim().length === 0) {
         return NextResponse.json(
@@ -81,9 +112,8 @@ export async function PUT(
           { status: 400 }
         );
       }
-      updateData.name = name.trim();
+      userUpdateData.name = name.trim();
     }
-
     if (email !== undefined) {
       if (typeof email !== "string" || !email.includes("@")) {
         return NextResponse.json(
@@ -91,25 +121,21 @@ export async function PUT(
           { status: 400 }
         );
       }
-      const newEmail = email.toLowerCase().trim();
-      if (newEmail !== existing.email) {
-        const emailTaken = await prisma.user.findUnique({
-          where: { email: newEmail },
-        });
-        if (emailTaken) {
-          return NextResponse.json(
-            { error: "A user with this email already exists" },
-            { status: 409 }
-          );
-        }
-      }
-      updateData.email = newEmail;
+      userUpdateData.email = email.toLowerCase().trim();
     }
-
     if (phone !== undefined) {
-      updateData.phone = phone?.trim() || null;
+      userUpdateData.phone = phone?.trim() || null;
     }
 
+    if (Object.keys(userUpdateData).length > 0) {
+      await prisma.user.update({
+        where: { id },
+        data: userUpdateData,
+      });
+    }
+
+    // Update membership details (permissions)
+    const membershipUpdateData: Record<string, unknown> = {};
     if (permissions !== undefined) {
       if (!Array.isArray(permissions)) {
         return NextResponse.json(
@@ -126,26 +152,45 @@ export async function PUT(
           { status: 400 }
         );
       }
-      updateData.permissions = permissions;
+      membershipUpdateData.permissions = permissions;
     }
 
-    const updated = await prisma.user.update({
-      where: { id },
-      data: updateData,
+    if (Object.keys(membershipUpdateData).length > 0) {
+      await prisma.workspaceMembership.update({
+        where: { id: membership.id },
+        data: membershipUpdateData,
+      });
+    }
+
+    // Fetch updated data
+    const updatedMembership = await prisma.workspaceMembership.findUnique({
+      where: { id: membership.id },
       select: {
-        id: true,
-        name: true,
-        email: true,
-        phone: true,
         role: true,
         permissions: true,
         isActive: true,
         createdAt: true,
         updatedAt: true,
+        user: {
+          select: { id: true, name: true, email: true, phone: true },
+        },
       },
     });
 
-    return NextResponse.json({ success: true, member: updated });
+    const member = {
+      id: updatedMembership!.user.id,
+      membershipId: membership.id,
+      name: updatedMembership!.user.name,
+      email: updatedMembership!.user.email,
+      phone: updatedMembership!.user.phone,
+      role: updatedMembership!.role,
+      permissions: updatedMembership!.permissions,
+      isActive: updatedMembership!.isActive,
+      createdAt: updatedMembership!.createdAt,
+      updatedAt: updatedMembership!.updatedAt,
+    };
+
+    return NextResponse.json({ success: true, member });
   } catch (error) {
     console.error("Update team member error:", error);
     return NextResponse.json(
@@ -167,26 +212,28 @@ export async function DELETE(
 
     const { id } = await params;
 
-    const existing = await prisma.user.findUnique({
-      where: { id },
+    // Find membership
+    const membership = await prisma.workspaceMembership.findUnique({
+      where: {
+        workspaceId_userId: {
+          workspaceId: user.id,
+          userId: id,
+        },
+      },
       select: { id: true, role: true },
     });
 
-    if (!existing) {
+    if (!membership) {
       return NextResponse.json(
         { error: "Team member not found" },
         { status: 404 }
       );
     }
 
-    if (existing.role === "admin") {
-      return NextResponse.json(
-        { error: "Cannot remove admin users" },
-        { status: 403 }
-      );
-    }
-
-    await prisma.user.delete({ where: { id } });
+    // Delete membership (not the user — they might be admin elsewhere)
+    await prisma.workspaceMembership.delete({
+      where: { id: membership.id },
+    });
 
     return NextResponse.json({ success: true });
   } catch (error) {

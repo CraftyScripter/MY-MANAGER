@@ -1,6 +1,6 @@
 export const SECTIONS = {
   dashboard: { label: "Dashboard", href: "/admin", description: "Analytics overview, metrics, and inquiry charts" },
-  leads: { label: "Leads", href: "/admin/leads", description: "Spreadsheet, custom sheets, folders, and lead records" },
+  leads: { label: "Spreadsheets", href: "/admin/leads", description: "Spreadsheets, custom sheets, folders, and records" },
   forms: { label: "Forms / Enquiries", href: "/admin/promise-me", description: "Website contact forms and builder enquiries" },
   credentials: { label: "Credentials", href: "/admin/credentials", description: "Encrypted credentials, logins, and project access keys" },
   finance: { label: "Finance / Payments", href: "/admin/payments", description: "Income, expenses, refunds, and financial summaries" },

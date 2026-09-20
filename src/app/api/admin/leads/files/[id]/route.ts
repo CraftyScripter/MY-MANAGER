@@ -52,7 +52,7 @@ export async function PUT(
   try {
     const { id } = await params;
     const body = await request.json();
-    const { name, description, folderId } = body;
+    const { name, description, folderId, hiddenMemberIds } = body;
 
     const existing = await prisma.leadFile.findUnique({ where: { id } });
     if (!existing) {
@@ -66,20 +66,26 @@ export async function PUT(
       }
     }
 
+    const updateData: Record<string, unknown> = {
+      name: name !== undefined ? name.trim() : existing.name,
+      description: description !== undefined ? description : existing.description,
+      folderId: folderId !== undefined ? folderId : existing.folderId,
+    };
+
+    if (hiddenMemberIds !== undefined) {
+      updateData.hiddenMemberIds = hiddenMemberIds;
+    }
+
     const file = await prisma.leadFile.update({
       where: { id },
-      data: {
-        name: name !== undefined ? name.trim() : existing.name,
-        description: description !== undefined ? description : existing.description,
-        folderId: folderId !== undefined ? folderId : existing.folderId,
-      },
+      data: updateData,
     });
 
     await logActivity({
       action: "update_file",
       section: "leads",
       user,
-      details: { fileId: id, name: file.name },
+      details: { fileId: id, name: file.name, hiddenMemberIds: file.hiddenMemberIds },
       req: request,
     });
 

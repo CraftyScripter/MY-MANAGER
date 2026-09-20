@@ -4,6 +4,7 @@ interface TokenPayload {
   userId: string;
   role: string;
   permissions: string[];
+  workspaceId?: string;
   expires: number;
 }
 

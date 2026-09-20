@@ -179,56 +179,44 @@ export async function getValidGoogleAccount(userId: string = "admin") {
   return account;
 }
 
-export async function getWorkspaceAdminGoogleAccount(preferredUserId?: string) {
-
-  // If preferredUserId is provided, try that first
-  if (preferredUserId && preferredUserId !== "admin") {
-    const userAccount = await getValidGoogleAccount(preferredUserId);
+export async function getWorkspaceAdminGoogleAccount(workspaceAdminId?: string) {
+  if (workspaceAdminId && workspaceAdminId !== "admin") {
+    // 1. Try finding by userId directly
+    const userAccount = await getValidGoogleAccount(workspaceAdminId);
     if (userAccount) return userAccount;
-  }
 
-  // Otherwise, find the primary admin's GoogleAccount (userId: "admin" or first available)
-  let adminAccount = await prisma.googleAccount.findFirst({
-    where: { userId: "admin" },
-    orderBy: { updatedAt: "desc" },
-  });
-
-  if (!adminAccount) {
-    adminAccount = await prisma.googleAccount.findFirst({
-      orderBy: { updatedAt: "desc" },
+    // 2. Check if the user exists and has a linked google account by email
+    const user = await prisma.user.findUnique({
+      where: { id: workspaceAdminId },
+      select: { email: true },
     });
-  }
-
-  if (!adminAccount) {
+    if (user) {
+      const accountByEmail = await prisma.googleAccount.findFirst({
+        where: { email: user.email.toLowerCase() },
+        orderBy: { updatedAt: "desc" },
+      });
+      if (accountByEmail) {
+        if (accountByEmail.userId !== workspaceAdminId) {
+          await prisma.googleAccount.update({
+            where: { id: accountByEmail.id },
+            data: { userId: workspaceAdminId },
+          });
+        }
+        return accountByEmail;
+      }
+    }
     return null;
   }
 
-  // Token auto-refresh check
-  const isExpired =
-    adminAccount.tokenExpiresAt &&
-    new Date(adminAccount.tokenExpiresAt).getTime() - 5 * 60 * 1000 < Date.now();
-
-  if (isExpired && adminAccount.refreshToken) {
-    try {
-      const refreshed = await refreshGoogleAccessToken(adminAccount.refreshToken);
-      const newExpiresAt = new Date(Date.now() + refreshed.expires_in * 1000);
-
-      const updated = await prisma.googleAccount.update({
-        where: { id: adminAccount.id },
-        data: {
-          accessToken: refreshed.access_token,
-          tokenExpiresAt: newExpiresAt,
-          updatedAt: new Date(),
-        },
-      });
-
-      return updated;
-    } catch (err) {
-      console.error("Failed to auto-refresh Workspace Admin Google token:", err);
-      return adminAccount;
-    }
+  // Legacy fallback for legacy "admin" string only
+  if (workspaceAdminId === "admin") {
+    const adminAccount = await prisma.googleAccount.findFirst({
+      where: { userId: "admin" },
+      orderBy: { updatedAt: "desc" },
+    });
+    if (adminAccount) return adminAccount;
   }
 
-  return adminAccount;
+  return null;
 }
 

@@ -42,34 +42,35 @@ export async function POST(request: Request) {
         return { success: false, error: "Failed to retrieve user profile from Google", status: 400 };
       }
 
-      // 3. Determine user ID (logged in user or matching admin/user email)
-      const currentUser = await getCurrentUser();
-      let userId = currentUser?.id || "";
+      // 3. Google Sign-In is ALWAYS for admin (own workspace)
+      // Ignore any current workspace membership context
+      let dbUser = await prisma.user.findUnique({
+        where: { email: profile.email.toLowerCase() },
+      });
 
-      if (!currentUser) {
-        // Find or create user in database — no hardcoded admin bypass
-        let dbUser = await prisma.user.findUnique({
-          where: { email: profile.email.toLowerCase() },
+      if (!dbUser) {
+        // Auto-create as admin
+        dbUser = await prisma.user.create({
+          data: {
+            email: profile.email.toLowerCase(),
+            name: profile.name || profile.email.split("@")[0],
+            role: "admin",
+            permissions: ["*"],
+            isActive: true,
+          },
         });
-
-        if (!dbUser) {
-          // Auto-create user
-          dbUser = await prisma.user.create({
-            data: {
-              email: profile.email.toLowerCase(),
-              name: profile.name || profile.email.split("@")[0],
-              role: "admin",
-              permissions: ["*"],
-              isActive: true,
-            },
-          });
-        }
-        userId = dbUser.id;
-        const userToken = createTokenForUser(dbUser.id, dbUser.role, dbUser.permissions);
-        await setAuthCookie(userToken);
-      } else {
-        userId = currentUser.id;
+      } else if (dbUser.role !== "admin") {
+        // User exists as team member elsewhere → promote to admin for own workspace
+        dbUser = await prisma.user.update({
+          where: { id: dbUser.id },
+          data: { role: "admin", permissions: ["*"], isActive: true },
+        });
       }
+
+      const userId = dbUser.id;
+      // Always create admin token (no workspaceId = own workspace)
+      const userToken = createTokenForUser(dbUser.id, "admin", ["*"]);
+      await setAuthCookie(userToken);
 
       // 4. Ensure complete dedicated workspace folder tree in Google Drive (AppData, Finance_Proofs, Instagram_Media, Documents)
       let driveFolderId: string | null = null;

@@ -93,7 +93,7 @@ export default function PricingPage() {
     },
     {
       q: "How does the 2-Way Google Sheet Sync work?",
-      a: "When you or your team edit any lead status, phone number, category, or deal value inside My Manager, it updates your Google Sheet within 150ms. Edits made directly in Google Sheets are also mirrored in My Manager.",
+      a: "When you or your team edit any row status, phone number, category, or deal value inside My Manager, it updates your Google Sheet within 150ms. Edits made directly in Google Sheets are also mirrored in My Manager.",
     },
     {
       q: "Can I cancel or change plans at any time?",

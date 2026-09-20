@@ -24,7 +24,7 @@ interface Pagination {
 }
 
 const SECTION_BADGES: Record<string, { label: string; class: string }> = {
-  leads: { label: "Leads", class: "bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/50" },
+  leads: { label: "Spreadsheets", class: "bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/50" },
   forms: { label: "Forms", class: "bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-400 border border-blue-200 dark:border-blue-800/50" },
   credentials: { label: "Password Manager", class: "bg-violet-50 dark:bg-violet-950/50 text-violet-700 dark:text-violet-400 border border-violet-200 dark:border-violet-800/50" },
   finance: { label: "Finance", class: "bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800/50" },
@@ -37,7 +37,7 @@ const SECTION_BADGES: Record<string, { label: string; class: string }> = {
 
 const SECTIONS_FILTER = [
   { id: "all", label: "All Sections" },
-  { id: "leads", label: "Leads" },
+  { id: "leads", label: "Spreadsheets" },
   { id: "forms", label: "Forms" },
   { id: "credentials", label: "Password Manager" },
   { id: "finance", label: "Finance" },

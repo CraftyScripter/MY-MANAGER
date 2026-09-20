@@ -128,7 +128,7 @@ export default function SaaSMarketingLandingPage() {
           {/* Subtitle */}
           <p className="mt-6 text-base sm:text-lg text-zinc-600 dark:text-zinc-400 max-w-3xl mx-auto leading-relaxed">
             Eliminate SaaS sprawl. Keep 100% data ownership in your own{" "}
-            <span className="text-zinc-900 dark:text-white font-semibold">Google Drive</span>, sync leads seamlessly with{" "}
+            <span className="text-zinc-900 dark:text-white font-semibold">Google Drive</span>, sync data seamlessly with{" "}
             <span className="text-zinc-900 dark:text-white font-semibold">Google Sheets</span>, and schedule clients with instant{" "}
             <span className="text-zinc-900 dark:text-white font-semibold">Google Meet</span> video links.
           </p>
@@ -234,7 +234,7 @@ export default function SaaSMarketingLandingPage() {
             <div className="md:hidden p-2 bg-zinc-50 dark:bg-zinc-900/60 border-b border-zinc-200 dark:border-zinc-800 flex items-center gap-1 overflow-x-auto scrollbar-thin">
               {[
                 { id: "dashboard", label: "Dashboard", icon: "📊" },
-                { id: "leads", label: "Leads & CRM", icon: "📋" },
+                { id: "leads", label: "Spreadsheets", icon: "📋" },
                 { id: "calendar", label: "Calendar", icon: "📅" },
                 { id: "forms", label: "Forms", icon: "✉️" },
                 { id: "finance", label: "Finance", icon: "💳" },
@@ -301,7 +301,7 @@ export default function SaaSMarketingLandingPage() {
                         <svg className="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                           <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 12h16.5m-16.5 3.75h16.5M3.75 19.5h16.5M5.625 4.5h12.75a1.875 1.875 0 010 3.75H5.625a1.875 1.875 0 010-3.75z" />
                         </svg>
-                        <span>Leads</span>
+                        <span>Spreadsheets</span>
                       </button>
 
                       <button
@@ -893,7 +893,7 @@ export default function SaaSMarketingLandingPage() {
                 </li>
                 <li className="flex items-start gap-2.5">
                   <span className="text-rose-500 mt-0.5 font-bold shrink-0">✕</span>
-                  <span>When a team member leaves the company, access to invoices, client leads, and media is lost.</span>
+                  <span>When a team member leaves the company, access to invoices, client data, and media is lost.</span>
                 </li>
                 <li className="flex items-start gap-2.5">
                   <span className="text-rose-500 mt-0.5 font-bold shrink-0">✕</span>
@@ -920,7 +920,7 @@ export default function SaaSMarketingLandingPage() {
                 </li>
                 <li className="flex items-start gap-2.5">
                   <span className="text-emerald-500 mt-0.5 font-bold shrink-0">✓</span>
-                  <span>Team members upload proofs, book meetings, and update leads without touching Google credentials.</span>
+                  <span>Team members upload proofs, book meetings, and update records without touching Google credentials.</span>
                 </li>
                 <li className="flex items-start gap-2.5">
                   <span className="text-emerald-500 mt-0.5 font-bold shrink-0">✓</span>
@@ -1014,7 +1014,7 @@ export default function SaaSMarketingLandingPage() {
               </div>
               <h3 className="text-base font-bold text-zinc-900 dark:text-white">Granular Team RBAC & Audit Trails</h3>
               <p className="text-xs sm:text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed">
-                Assign customized permissions across finance, leads, vault, and calendar. Every action is automatically logged in real-time activity feeds.
+                Assign customized permissions across finance, spreadsheets, vault, and calendar. Every action is automatically logged in real-time activity feeds.
               </p>
             </div>
           </div>

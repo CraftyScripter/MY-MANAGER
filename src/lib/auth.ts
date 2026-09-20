@@ -20,6 +20,7 @@ export interface TokenPayload {
   userId: string;
   role: string;
   permissions: string[];
+  workspaceId?: string; // null = own workspace (admin), string = member workspace
   expires: number;
 }
 
@@ -30,6 +31,11 @@ export interface CurrentUser {
   phone?: string | null;
   role: string;
   permissions: string[];
+  workspaceId?: string; // Set when user is acting in a team member workspace
+}
+
+export function getEffectiveWorkspaceAdminId(user: CurrentUser): string {
+  return user.workspaceId || user.id;
 }
 
 
@@ -76,12 +82,14 @@ export function createAdminToken(): string {
 export function createTokenForUser(
   userId: string,
   role: string,
-  permissions: string[]
+  permissions: string[],
+  workspaceId?: string
 ): string {
   const payload: TokenPayload = {
     userId,
     role,
     permissions,
+    workspaceId,
     expires: Date.now() + TOKEN_EXPIRY,
   };
   return signPayload(payload);
@@ -109,16 +117,6 @@ export async function getAuthToken(): Promise<string | null> {
   return cookieStore.get(COOKIE_NAME)?.value || null;
 }
 
-export function validateCredentials(
-  username: string,
-  password: string
-): boolean {
-  return (
-    username === process.env.ADMIN_USER &&
-    password === process.env.ADMIN_PASS
-  );
-}
-
 export async function getCurrentUser(): Promise<CurrentUser | null> {
   const token = await getAuthToken();
   if (!token) return null;
@@ -126,7 +124,44 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
   const payload = verifySignedToken(token);
   if (!payload) return null;
 
-  // Always check database — no hardcoded admin bypass
+  // Workspace member — check membership
+  if (payload.workspaceId) {
+    const membership = await prisma.workspaceMembership.findUnique({
+      where: {
+        workspaceId_userId: {
+          workspaceId: payload.workspaceId,
+          userId: payload.userId,
+        },
+      },
+      select: {
+        isActive: true,
+        role: true,
+        permissions: true,
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            phone: true,
+          },
+        },
+      },
+    });
+
+    if (!membership || !membership.isActive) return null;
+
+    return {
+      id: membership.user.id,
+      name: membership.user.name,
+      email: membership.user.email,
+      phone: membership.user.phone,
+      role: membership.role,
+      permissions: membership.permissions,
+      workspaceId: payload.workspaceId,
+    };
+  }
+
+  // Workspace admin — check database directly
   const user = await prisma.user.findUnique({
     where: { id: payload.userId },
     select: {

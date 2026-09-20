@@ -43,7 +43,7 @@ const navGroups: NavGroup[] = [
         ),
       },
       {
-        label: "Leads",
+        label: "Spreadsheets",
         href: "/admin/leads",
         permission: "leads",
         icon: (
@@ -207,11 +207,24 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   );
 }
 
+interface WorkspaceOption {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  isCurrent: boolean;
+}
+
 function AdminLayoutInner({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const [user, setUser] = useState<UserInfo | null>(null);
   const [loading, setLoading] = useState(true);
+  const [permissionToast, setPermissionToast] = useState<string | null>(null);
+  const prevPermissionsRef = useRef<string[]>([]);
+  const [workspaces, setWorkspaces] = useState<WorkspaceOption[]>([]);
+  const [showWorkspaceDropdown, setShowWorkspaceDropdown] = useState(false);
+  const [switchingWorkspace, setSwitchingWorkspace] = useState(false);
 
   // Sidebar width (resizable)
   const [sidebarWidth, setSidebarWidth] = useState(260);
@@ -228,6 +241,38 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
     setMobileMenuOpen(false);
   }, [pathname]);
 
+  const fetchWorkspaces = useCallback(async () => {
+    try {
+      const res = await fetch("/api/admin/auth/workspaces");
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data.workspaces)) {
+          setWorkspaces(data.workspaces);
+        }
+      }
+    } catch {}
+  }, []);
+
+  const handleSwitchWorkspace = async (workspaceId: string) => {
+    if (switchingWorkspace) return;
+    setSwitchingWorkspace(true);
+    try {
+      const res = await fetch("/api/admin/auth/workspaces", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ workspaceId }),
+      });
+      if (res.ok) {
+        window.location.href = "/admin";
+        return;
+      }
+    } catch {}
+    finally {
+      setSwitchingWorkspace(false);
+      setShowWorkspaceDropdown(false);
+    }
+  };
+
   const fetchUser = useCallback(async () => {
     try {
       const res = await fetch("/api/admin/auth/me");
@@ -241,16 +286,67 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
         return;
       }
       setUser(data.user);
+      fetchWorkspaces();
     } catch {
       router.push(`/?from=${encodeURIComponent(pathname)}`);
     } finally {
       setLoading(false);
     }
-  }, [pathname, router]);
+  }, [pathname, router, fetchWorkspaces]);
 
   useEffect(() => {
     fetchUser();
   }, [fetchUser]);
+
+  // Permission polling — detect when admin removes/changes permissions
+  useEffect(() => {
+    if (!user || user.role === "admin") return;
+
+    // Store initial permissions
+    prevPermissionsRef.current = [...(user.permissions || [])];
+
+    const pollPermissions = async () => {
+      try {
+        const res = await fetch("/api/admin/auth/me");
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!data.authenticated || !data.user) return;
+
+        const newPerms = data.user.permissions || [];
+        const oldPerms = prevPermissionsRef.current;
+
+        // Check if any permissions were removed
+        const removedPerms = oldPerms.filter((p: string) => !newPerms.includes(p));
+        // Check if any permissions were added
+        const addedPerms = newPerms.filter((p: string) => !oldPerms.includes(p));
+
+        if (removedPerms.length > 0) {
+          const SECTION_LABELS: Record<string, string> = {
+            leads: "Spreadsheets", forms: "Forms", credentials: "Credentials",
+            finance: "Finance", calendar: "Calendar", env: "Environment",
+            team: "Team", activity_log: "Activity Log", instagram: "Instagram",
+            settings: "Settings", dashboard: "Dashboard",
+          };
+          const removed = removedPerms.map((p: string) => {
+            const section = p.split(":")[0];
+            const access = p.includes(":write") ? "write" : "read";
+            return `${SECTION_LABELS[section] || section} (${access})`;
+          }).join(", ");
+          setPermissionToast(`⚠️ Permissions removed: ${removed}`);
+          setTimeout(() => setPermissionToast(null), 8000);
+        } else if (addedPerms.length > 0) {
+          setPermissionToast("✅ New permissions have been added to your account");
+          setTimeout(() => setPermissionToast(null), 5000);
+        }
+
+        prevPermissionsRef.current = [...newPerms];
+        setUser(data.user);
+      } catch {}
+    };
+
+    const interval = setInterval(pollPermissions, 30000); // Poll every 30 seconds
+    return () => clearInterval(interval);
+  }, [user?.role, user?.id]);
 
   // Handle resizing
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
@@ -358,8 +454,9 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
                 <p className="text-sm font-bold text-zinc-900 dark:text-white tracking-tight leading-tight group-hover:text-zinc-600 dark:group-hover:text-zinc-300 transition">
                   My Manager
                 </p>
-                <p className="text-[10px] text-zinc-500 dark:text-zinc-400 leading-tight mt-0.5">
+                <p className="text-[10px] text-zinc-500 dark:text-zinc-400 leading-tight mt-0.5 flex items-center gap-1">
                   Dashboard & Workspace
+                  <span className="inline-block px-1 py-px rounded text-[8px] font-bold uppercase bg-purple-500/15 text-purple-600 dark:text-purple-400 border border-purple-500/20 leading-none">Admin</span>
                 </p>
               </div>
             </Link>
@@ -369,15 +466,25 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
               className="flex items-center gap-2 group p-1 -m-1 rounded-xl hover:bg-zinc-100 dark:hover:bg-[#18181b] transition min-w-0 max-w-[calc(100%-3rem)]"
               title="View Profile"
             >
-              <div className="w-8 h-8 rounded-full bg-indigo-600 border border-indigo-700 flex items-center justify-center text-xs font-bold text-white shrink-0">
-                {userInitial}
-              </div>
+              {user?.image ? (
+                <img
+                  src={user.image}
+                  alt={userDisplayName}
+                  className="w-8 h-8 rounded-full object-cover border border-zinc-300 dark:border-zinc-700 shrink-0"
+                  referrerPolicy="no-referrer"
+                />
+              ) : (
+                <div className="w-8 h-8 rounded-full bg-indigo-600 border border-indigo-700 flex items-center justify-center text-xs font-bold text-white shrink-0">
+                  {userInitial}
+                </div>
+              )}
               <div className="min-w-0 flex-1">
                 <p className="text-xs font-bold text-zinc-900 dark:text-white tracking-tight leading-tight truncate">
                   {userDisplayName}
                 </p>
-                <p className="text-[10px] text-zinc-500 dark:text-zinc-400 leading-tight truncate">
-                  {user?.email}
+                <p className="text-[10px] text-zinc-500 dark:text-zinc-400 leading-tight truncate flex items-center gap-1">
+                  <span className="truncate">{user?.email}</span>
+                  <span className="inline-block px-1 py-px rounded text-[8px] font-bold uppercase bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/20 leading-none shrink-0">Team</span>
                 </p>
               </div>
             </Link>
@@ -399,6 +506,63 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
             </svg>
           </button>
         </div>
+
+        {/* Multi-workspace Switcher (shown when user has multiple workspaces) */}
+        {workspaces.length > 1 && (
+          <div className="px-3 py-2 border-b border-zinc-200 dark:border-[#27272a] bg-slate-50/50 dark:bg-zinc-900/30">
+            <div className="relative">
+              <button
+                onClick={() => setShowWorkspaceDropdown((v) => !v)}
+                className="w-full px-2.5 py-1.5 rounded-lg bg-white dark:bg-zinc-800/80 border border-zinc-200 dark:border-zinc-700/80 text-left text-xs flex items-center justify-between gap-2 hover:border-zinc-300 dark:hover:border-zinc-600 transition cursor-pointer shadow-xs"
+              >
+                <div className="min-w-0 flex-1">
+                  <p className="text-[10px] text-zinc-400 dark:text-zinc-500 font-semibold uppercase tracking-wider">
+                    Current Workspace
+                  </p>
+                  <p className="text-xs font-bold text-zinc-900 dark:text-white truncate">
+                    {workspaces.find((w) => w.isCurrent)?.name || "Workspace"}
+                  </p>
+                </div>
+                <svg
+                  className={`w-3.5 h-3.5 text-zinc-400 transition-transform ${showWorkspaceDropdown ? "rotate-180" : ""}`}
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+                </svg>
+              </button>
+
+              {showWorkspaceDropdown && (
+                <div className="absolute left-0 right-0 top-full mt-1.5 bg-white dark:bg-[#18181b] border border-zinc-200 dark:border-zinc-700 rounded-xl shadow-xl z-50 p-1 space-y-1">
+                  {workspaces.map((w) => (
+                    <button
+                      key={w.id}
+                      onClick={() => handleSwitchWorkspace(w.id)}
+                      disabled={w.isCurrent || switchingWorkspace}
+                      className={`w-full px-2.5 py-2 rounded-lg text-left text-xs flex items-center justify-between gap-2 transition cursor-pointer ${
+                        w.isCurrent
+                          ? "bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 font-semibold"
+                          : "hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300"
+                      }`}
+                    >
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate font-medium">{w.name}</p>
+                        <p className="text-[10px] text-zinc-400 dark:text-zinc-500 truncate">
+                          {w.role === "admin" ? "Admin" : "Team Member"} &middot; {w.email}
+                        </p>
+                      </div>
+                      {w.isCurrent && (
+                        <span className="w-1.5 h-1.5 rounded-full bg-blue-600 dark:bg-blue-400 shrink-0" />
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Grouped Navigation */}
         <nav className="flex-1 px-3 py-3 overflow-y-auto admin-scroll space-y-4">
@@ -465,8 +629,22 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
           )}
         </nav>
 
-        {/* Theme Mode Switcher & Logout */}
+        {/* Role Badge & Theme & Logout */}
         <div className="p-3 pb-3 border-t border-zinc-200 dark:border-[#27272a] shrink-0 space-y-2">
+          {user && (
+            <div className={`flex items-center gap-2 px-3 py-2 rounded-xl text-[11px] font-semibold border ${
+              user.role === "admin"
+                ? "bg-purple-500/5 text-purple-600 dark:text-purple-400 border-purple-500/15"
+                : "bg-blue-500/5 text-blue-600 dark:text-blue-400 border-blue-500/15"
+            }`}>
+              {user.role === "admin" ? (
+                <svg className="w-3.5 h-3.5 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10.868 2.884c-.321-.772-1.415-.772-1.736 0l-1.83 4.401-4.753.381c-.833.067-1.171 1.107-.536 1.651l3.62 3.102 1.106 4.637c.12.513-.453.913-.875.67L4.5 14.127l-3.973 2.134c-.453.245-1.002-.134-.885-.64l1.05-4.496L.393 9.473c-.656-.563-.306-1.535.53-1.602l4.753-.381 1.83-4.401z" clipRule="evenodd" /></svg>
+              ) : (
+                <svg className="w-3.5 h-3.5 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" /></svg>
+              )}
+              <span>{user.role === "admin" ? "Admin Account" : "Team Member"}</span>
+            </div>
+          )}
           <ThemeToggle variant="segmented" />
           <button
             onClick={handleLogout}
@@ -528,6 +706,26 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
         </div>
 
         <div className="w-full flex-1 flex flex-col">
+          {/* Permission Change Toast */}
+          {permissionToast && (
+            <div className="sticky top-0 z-50 mx-4 mt-3">
+              <div className={`flex items-center gap-3 px-4 py-3 rounded-xl border text-sm font-medium shadow-lg backdrop-blur-sm transition-all ${
+                permissionToast.startsWith("⚠️")
+                  ? "bg-amber-50/95 dark:bg-amber-950/95 border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-200"
+                  : "bg-emerald-50/95 dark:bg-emerald-950/95 border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200"
+              }`}>
+                <span className="flex-1">{permissionToast}</span>
+                <button
+                  onClick={() => setPermissionToast(null)}
+                  className="text-current opacity-50 hover:opacity-100 cursor-pointer"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          )}
           {!isAuthorized ? (
             <div className="flex-1 flex items-center justify-center p-8 bg-[#09090b]">
               <div className="bg-[#111114] border border-[#27272a] rounded-2xl p-8 max-w-md w-full text-center">

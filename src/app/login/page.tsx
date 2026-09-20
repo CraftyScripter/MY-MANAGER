@@ -51,6 +51,17 @@ function LoginForm() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
 
+  // Workspace selector state
+  const [needsWorkspaceSelection, setNeedsWorkspaceSelection] = useState(false);
+  const [workspaces, setWorkspaces] = useState<Array<{
+    workspaceId: string;
+    workspaceName: string;
+    workspaceEmail: string;
+    role: string;
+    permissions: string[];
+  }>>([]);
+  const [selectedWorkspace, setSelectedWorkspace] = useState<string | null>(null);
+
   // Reset loading when user returns to this page (e.g. after cancelling Google OAuth)
   useEffect(() => {
     const handleVisibility = () => {
@@ -102,6 +113,14 @@ function LoginForm() {
 
       const data = await res.json();
 
+      // If workspace selection is needed
+      if (data.requiresWorkspaceSelection) {
+        setWorkspaces(data.workspaces);
+        setNeedsWorkspaceSelection(true);
+        setLoading(false);
+        return;
+      }
+
       if (!res.ok) {
         setError("Unable to sign in. Please check your credentials and try again.");
         setLoading(false);
@@ -118,6 +137,37 @@ function LoginForm() {
     } catch {
       setError("Failed to connect to server");
       setLoading(false);
+    }
+  };
+
+  const handleWorkspaceLogin = async (workspaceId: string) => {
+    setLoading(true);
+    setError("");
+    setSelectedWorkspace(workspaceId);
+
+    try {
+      const res = await fetch("/api/admin/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: email, password, workspaceId }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.error || "Failed to sign in to this workspace");
+        setLoading(false);
+        setSelectedWorkspace(null);
+        return;
+      }
+
+      // Success — redirect to permitted section
+      const target = from || getFirstPermittedPath(data.permissions || []);
+      router.replace(target);
+    } catch {
+      setError("Failed to connect to server");
+      setLoading(false);
+      setSelectedWorkspace(null);
     }
   };
 
@@ -147,7 +197,55 @@ function LoginForm() {
         </div>
       )}
 
-      {/* Mode Toggle */}
+      {/* Workspace Selector */}
+      {needsWorkspaceSelection && (
+        <div className="space-y-3">
+          <div className="p-3 rounded-xl bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/20">
+            <p className="text-xs text-blue-700 dark:text-blue-300 font-medium text-center">
+              Select a workspace to sign in to:
+            </p>
+          </div>
+          {workspaces.map((ws) => (
+            <button
+              key={ws.workspaceId}
+              onClick={() => handleWorkspaceLogin(ws.workspaceId)}
+              disabled={loading}
+              className={`w-full p-4 rounded-xl border text-left transition-all cursor-pointer ${
+                selectedWorkspace === ws.workspaceId
+                  ? "bg-blue-50 dark:bg-blue-500/10 border-blue-400 dark:border-blue-500/40"
+                  : "bg-zinc-50 dark:bg-zinc-900/60 border-zinc-200 dark:border-zinc-800 hover:border-blue-300 dark:hover:border-blue-500/30"
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center text-sm font-bold text-white shadow-md shrink-0">
+                  {ws.workspaceName?.charAt(0)?.toUpperCase() || "W"}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-zinc-900 dark:text-white truncate">
+                    {ws.workspaceName}
+                  </p>
+                  <p className="text-[11px] text-zinc-500 dark:text-zinc-400 truncate">
+                    {ws.workspaceEmail} &middot; {ws.role}
+                  </p>
+                </div>
+                {selectedWorkspace === ws.workspaceId && loading && (
+                  <div className="w-4 h-4 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
+                )}
+              </div>
+            </button>
+          ))}
+          <button
+            type="button"
+            onClick={() => { setNeedsWorkspaceSelection(false); setWorkspaces([]); setSelectedWorkspace(null); setError(""); }}
+            className="w-full py-2 text-xs font-medium text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 transition"
+          >
+            &larr; Back to login
+          </button>
+        </div>
+      )}
+
+      {/* Mode Toggle (hidden when workspace selector is shown) */}
+      {!needsWorkspaceSelection && (<>
       <div className="flex bg-zinc-100 dark:bg-zinc-900/60 p-1 rounded-xl border border-zinc-200 dark:border-zinc-800">
         <button
           type="button"
@@ -286,6 +384,7 @@ function LoginForm() {
           </div>
         </form>
       )}
+      </>)}
 
       <div className="pt-2 text-center text-xs text-zinc-500 border-t border-zinc-200 dark:border-zinc-800">
         New to My Manager?{" "}

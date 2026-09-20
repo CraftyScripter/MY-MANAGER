@@ -41,8 +41,18 @@ export async function GET() {
         select: { type: true, amount: true, status: true, date: true, createdAt: true },
         orderBy: { date: "asc" },
       }),
-      prisma.user.findMany({
-        select: { id: true, name: true, email: true, role: true, isActive: true },
+      prisma.workspaceMembership.findMany({
+        where: { workspaceId: user.id },
+        select: {
+          id: true,
+          role: true,
+          isActive: true,
+          permissions: true,
+          user: {
+            select: { id: true, name: true, email: true },
+          },
+        },
+        orderBy: { createdAt: "desc" },
       }),
       prisma.activityLog.findMany({
         take: 5,
@@ -133,7 +143,13 @@ export async function GET() {
       teamSummary: {
         total: teamMembers.length,
         active: teamMembers.filter((m: { isActive: boolean }) => m.isActive).length,
-        members: teamMembers,
+        members: teamMembers.map((m: any) => ({
+          id: m.user.id,
+          name: m.user.name,
+          email: m.user.email,
+          role: m.role,
+          isActive: m.isActive,
+        })),
       },
       instagramSummary: {
         accounts: instagramAccounts.length,
