@@ -2,8 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser, getEffectiveWorkspaceAdminId } from "@/lib/auth";
 import { uploadToAdminDrive } from "@/lib/googleDriveService";
 import { getWorkspaceAdminGoogleAccount, getValidGoogleAccount } from "@/lib/google";
+import sharp from "sharp";
 import fs from "fs";
 import path from "path";
+
+// Instagram limits
+const INSTAGRAM_MAX_WIDTH = 1080;
+const INSTAGRAM_MAX_HEIGHT = 1350;
+const INSTAGRAM_JPEG_QUALITY = 85;
 
 export async function POST(request: NextRequest) {
   try {
@@ -19,10 +25,57 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "No file provided" }, { status: 400 });
     }
 
-    const buffer = Buffer.from(await file.arrayBuffer());
+    let buffer = Buffer.from(await file.arrayBuffer());
     const isVideo = file.type.startsWith("video/") || Boolean(file.name.match(/\.(mp4|mov|webm)$/i));
     const resourceType = isVideo ? "video" : "image";
     const mimeType = file.type || (isVideo ? "video/mp4" : "image/jpeg");
+
+    // Resize images to fit Instagram limits (skip videos — Instagram handles those)
+    if (!isVideo && file.type.startsWith("image/")) {
+      try {
+        const metadata = await sharp(buffer).metadata();
+        const origW = metadata.width || 0;
+        const origH = metadata.height || 0;
+
+        const needsResize =
+          origW > INSTAGRAM_MAX_WIDTH ||
+          origH > INSTAGRAM_MAX_HEIGHT ||
+          metadata.format === "png" || // Convert PNG → JPEG for smaller size
+          (file.size > 4 * 1024 * 1024); // > 4MB
+
+        if (needsResize) {
+          console.log(
+            `[Instagram Upload] Resizing image: ${origW}x${origH}, ${(file.size / 1024 / 1024).toFixed(1)}MB → max ${INSTAGRAM_MAX_WIDTH}x${INSTAGRAM_MAX_HEIGHT}`
+          );
+
+          let pipeline = sharp(buffer).rotate(); // Auto-rotate based on EXIF
+
+          // Resize to fit within Instagram limits, preserving aspect ratio
+          pipeline = pipeline.resize({
+            width: INSTAGRAM_MAX_WIDTH,
+            height: INSTAGRAM_MAX_HEIGHT,
+            fit: "inside",
+            withoutEnlargement: true, // Don't upscale small images
+          });
+
+          // Convert to JPEG with good quality
+          pipeline = pipeline.jpeg({
+            quality: INSTAGRAM_JPEG_QUALITY,
+            mozjpeg: true, // Better compression
+          });
+
+          buffer = await pipeline.toBuffer();
+
+          const newMetadata = await sharp(buffer).metadata();
+          console.log(
+            `[Instagram Upload] Resized to: ${newMetadata.width}x${newMetadata.height}, ${(buffer.length / 1024 / 1024).toFixed(1)}MB`
+          );
+        }
+      } catch (resizeErr: any) {
+        console.warn("[Instagram Upload] Resize failed, using original image:", resizeErr.message);
+        // Continue with original buffer if resize fails
+      }
+    }
 
     const timestamp = Date.now();
     const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");

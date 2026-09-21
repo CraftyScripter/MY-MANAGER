@@ -89,6 +89,186 @@ interface ActivityItem {
   createdAt: string;
 }
 
+function formatActivityAction(action: string): string {
+  if (!action) return "System Activity";
+  const map: Record<string, string> = {
+    login: "User Logged In",
+    logout: "User Logged Out",
+    INSTAGRAM_POST_PUBLISHED: "Instagram Post Published",
+    INSTAGRAM_POST_SCHEDULED: "Instagram Post Scheduled",
+    INSTAGRAM_POST_DELETED: "Instagram Post Deleted",
+    INSTAGRAM_ACCOUNT_CONNECTED: "Instagram Connected",
+    INSTAGRAM_ACCOUNT_DISCONNECTED: "Instagram Disconnected",
+    CREATE_PAYMENT: "Payment Recorded",
+    UPDATE_PAYMENT: "Payment Updated",
+    DELETE_PAYMENT: "Payment Deleted",
+    CREATE_CREDENTIAL: "Password Stored",
+    UPDATE_CREDENTIAL: "Password Updated",
+    DELETE_CREDENTIAL: "Password Deleted",
+    IMPORT_LEADS: "Leads Imported",
+    CREATE_LEAD: "Lead Created",
+    UPDATE_LEAD: "Lead Updated",
+    DELETE_LEAD: "Lead Deleted",
+    CREATE_ENV: "Env Variable Added",
+    UPDATE_ENV: "Env Variable Updated",
+    DELETE_ENV: "Env Variable Deleted",
+  };
+  if (map[action]) return map[action];
+  return action
+    .toLowerCase()
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+function getActivitySubtitle(act: ActivityItem): string {
+  let message = "";
+  let role = "";
+  if (act.details) {
+    try {
+      const parsed = JSON.parse(act.details);
+      if (typeof parsed === "object" && parsed !== null) {
+        if (typeof parsed.role === "string" && parsed.role.trim()) {
+          role = parsed.role.trim();
+        }
+        if (typeof parsed.message === "string" && parsed.message.trim()) {
+          message = parsed.message.trim();
+        } else {
+          const keys = Object.keys(parsed).filter((k) => k !== "_client" && k !== "role");
+          if (keys.length > 0) {
+            const firstKey = keys[0];
+            const val = parsed[firstKey];
+            if (typeof val === "string" || typeof val === "number" || typeof val === "boolean") {
+              message = `${firstKey}: ${val}`;
+            }
+          }
+        }
+      }
+    } catch {
+      if (typeof act.details === "string" && act.details.trim()) {
+        message = act.details.trim();
+      }
+    }
+  }
+
+  const actor = act.userName || (act.userEmail ? act.userEmail.split("@")[0] : null);
+  const actorWithRole = actor ? (role ? `${actor} (${role})` : actor) : (role ? `(${role})` : null);
+
+  if (message && actorWithRole) {
+    return `${message} • by ${actorWithRole}`;
+  }
+  if (message) return message;
+  if (actorWithRole) return `by ${actorWithRole}`;
+  return act.section ? `Section: ${act.section}` : "System event";
+}
+
+function formatActivityTime(dateStr: string): string {
+  try {
+    const d = new Date(dateStr);
+    const now = new Date();
+    const diffSec = Math.floor((now.getTime() - d.getTime()) / 1000);
+    if (diffSec < 60) return "Just now";
+    const diffMin = Math.floor(diffSec / 60);
+    if (diffMin < 60) return `${diffMin}m ago`;
+    const diffHours = Math.floor(diffMin / 60);
+    if (diffHours < 24) return `${diffHours}h ago`;
+    const diffDays = Math.floor(diffHours / 24);
+    if (diffDays === 1) return "Yesterday";
+    if (diffDays < 7) return `${diffDays}d ago`;
+    return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  } catch {
+    return "";
+  }
+}
+
+function getActivityIconMeta(section: string) {
+  const s = (section || "").toLowerCase();
+  switch (s) {
+    case "instagram":
+      return {
+        bg: "bg-pink-500/10 text-pink-600 dark:text-pink-400 border-pink-500/20",
+        icon: (
+          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+            <rect x="2" y="2" width="20" height="20" rx="5" ry="5" />
+            <circle cx="12" cy="12" r="4" />
+          </svg>
+        ),
+      };
+    case "leads":
+      return {
+        bg: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20",
+        icon: (
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z" />
+          </svg>
+        ),
+      };
+    case "forms":
+      return {
+        bg: "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20",
+        icon: (
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+          </svg>
+        ),
+      };
+    case "credentials":
+      return {
+        bg: "bg-violet-500/10 text-violet-600 dark:text-violet-400 border-violet-500/20",
+        icon: (
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
+          </svg>
+        ),
+      };
+    case "finance":
+    case "payment":
+      return {
+        bg: "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20",
+        icon: (
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        ),
+      };
+    case "env":
+      return {
+        bg: "bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20",
+        icon: (
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M17.25 6.75L22.5 12l-5.25 5.25m-10.5 0L1.5 12l5.25-5.25m7.5-3l-4.5 16.5" />
+          </svg>
+        ),
+      };
+    case "team":
+      return {
+        bg: "bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border-cyan-500/20",
+        icon: (
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" />
+          </svg>
+        ),
+      };
+    case "auth":
+      return {
+        bg: "bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20",
+        icon: (
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
+          </svg>
+        ),
+      };
+    default:
+      return {
+        bg: "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20",
+        icon: (
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" />
+          </svg>
+        ),
+      };
+  }
+}
+
 export default function AdminPage() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -113,7 +293,7 @@ export default function AdminPage() {
       const res = await fetch(`/api/admin/stats?_t=${Date.now()}`, { cache: "no-store" });
       if (!res.ok) throw new Error("Failed to load statistics");
       const data: DashboardStats = await res.json();
-      const signature = `${data.total}_${data.replied}_${data.pending}_${data.formBridge?.totalProjects}_${data.paymentSummary?.netBalance}_${data.teamSummary?.total}`;
+      const signature = `${data.total}_${data.replied}_${data.pending}_${data.formBridge?.totalProjects}_${data.paymentSummary?.netBalance}_${data.teamSummary?.total}_${data.recentActivities?.[0]?.id || ""}`;
       if (isBackground && signature === lastDataSignatureRef.current) {
         return;
       }
@@ -581,24 +761,50 @@ export default function AdminPage() {
             <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">Real-time audit trail across modules</p>
           </div>
 
-          <div className="divide-y divide-zinc-100 dark:divide-zinc-800/60 my-2 flex-1 flex flex-col justify-center">
+          <div className="py-3 flex-1 flex flex-col justify-center">
             {recentActivities.length > 0 ? (
-              recentActivities.slice(0, 4).map((act) => (
-                <div key={act.id} className="py-2 flex items-center justify-between text-xs">
-                  <div className="flex items-center gap-2 truncate">
-                    <span className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />
-                    <span className="font-medium text-zinc-900 dark:text-white truncate capitalize">
-                      {act.action.replace(/_/g, " ")}
-                    </span>
-                  </div>
-                  <span className="text-[10px] text-zinc-400 shrink-0 ml-2">
-                    {new Date(act.createdAt).toLocaleDateString()}
-                  </span>
-                </div>
-              ))
+              <div className="space-y-2">
+                {recentActivities.slice(0, 5).map((act) => {
+                  const sectionMeta = getActivityIconMeta(act.section);
+                  const formattedTitle = formatActivityAction(act.action);
+                  const subtitle = getActivitySubtitle(act);
+                  const timeStr = formatActivityTime(act.createdAt);
+
+                  return (
+                    <Link
+                      key={act.id}
+                      href="/admin/activity-log"
+                      className="p-2.5 rounded-xl bg-slate-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800/60 hover:border-zinc-300 dark:hover:border-zinc-700 hover:bg-slate-100/70 dark:hover:bg-zinc-800/50 transition flex items-center justify-between gap-3 group"
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                        <div className={`w-8 h-8 rounded-lg ${sectionMeta.bg} border flex items-center justify-center shrink-0`}>
+                          {sectionMeta.icon}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs font-semibold text-zinc-900 dark:text-white truncate group-hover:text-blue-600 dark:group-hover:text-blue-400 transition">
+                            {formattedTitle}
+                          </p>
+                          <p className="text-[10px] text-zinc-500 dark:text-zinc-400 truncate mt-0.5">
+                            {subtitle}
+                          </p>
+                        </div>
+                      </div>
+                      <span className="text-[10px] font-medium text-zinc-400 dark:text-zinc-500 shrink-0 tabular-nums">
+                        {timeStr}
+                      </span>
+                    </Link>
+                  );
+                })}
+              </div>
             ) : (
               <div className="text-center py-4">
-                <p className="text-xs text-zinc-400">No activity logged yet</p>
+                <p className="text-xs text-zinc-400 mb-2">No activity logged yet</p>
+                <Link
+                  href="/admin/activity-log"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold transition-all active:scale-97"
+                >
+                  View Activity Logs →
+                </Link>
               </div>
             )}
           </div>

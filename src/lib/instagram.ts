@@ -496,64 +496,103 @@ export async function publishInstagramMedia({
   if (isCarousel) {
     const childContainerIds: string[] = [];
 
+    console.log(`[Instagram] Creating carousel with ${targetMediaUrls.length} items`);
+
     // Create item containers for each media item
-    for (const urlItem of targetMediaUrls) {
+    for (let i = 0; i < targetMediaUrls.length; i++) {
+      const urlItem = targetMediaUrls[i];
       const isItemVideo = urlItem.match(/\.(mp4|mov|webm)$/i);
       let itemContainerId: string | null = null;
 
+      // Validate URL
+      if (!urlItem || !urlItem.startsWith("http")) {
+        console.error(`[Instagram] Invalid media URL at index ${i}: ${urlItem?.substring(0, 100)}`);
+        lastErrorMessage = `Invalid media URL at index ${i}: must be a publicly accessible HTTP/HTTPS URL`;
+        continue;
+      }
+
+      console.log(`[Instagram] Creating child container ${i + 1}/${targetMediaUrls.length} (type: ${isItemVideo ? "VIDEO" : "IMAGE"}, url: ${urlItem.substring(0, 80)}...)`);
+
       for (const baseEndpoint of hostEndpoints) {
         try {
-          const containerUrl = new URL(`${baseEndpoint}/media`);
-          containerUrl.searchParams.set("access_token", accessToken);
-          containerUrl.searchParams.set("is_carousel_item", "true");
+          // Use POST body instead of query params to avoid URL length limits
+          const requestBody = new URLSearchParams();
+          requestBody.set("access_token", accessToken);
+          requestBody.set("is_carousel_item", "true");
 
           if (isItemVideo) {
-            containerUrl.searchParams.set("media_type", "VIDEO");
-            containerUrl.searchParams.set("video_url", urlItem);
+            requestBody.set("media_type", "VIDEO");
+            requestBody.set("video_url", urlItem);
           } else {
-            containerUrl.searchParams.set("image_url", urlItem);
+            requestBody.set("image_url", urlItem);
           }
 
-          const res = await fetch(containerUrl.toString(), { method: "POST" });
+          const res = await fetch(`${baseEndpoint}/media`, {
+            method: "POST",
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            body: requestBody.toString(),
+          });
           const data = await res.json();
+
           if (res.ok && data.id) {
             itemContainerId = data.id;
             successfulBaseUrl = baseEndpoint;
+            console.log(`[Instagram] Child container ${i + 1} created: ${data.id} (endpoint: ${baseEndpoint})`);
             break;
+          } else {
+            const apiError = data.error?.message || data.error?.type || JSON.stringify(data);
+            console.error(`[Instagram] Child container ${i + 1} failed at ${baseEndpoint}: ${apiError}`);
+            lastErrorMessage = apiError;
           }
         } catch (e: any) {
+          console.error(`[Instagram] Child container ${i + 1} exception at ${baseEndpoint}:`, e.message);
           lastErrorMessage = e.message;
         }
       }
 
       if (itemContainerId) {
         childContainerIds.push(itemContainerId);
+      } else {
+        console.error(`[Instagram] FAILED to create child container ${i + 1} for URL: ${urlItem.substring(0, 100)}`);
       }
     }
 
+    console.log(`[Instagram] Carousel child containers created: ${childContainerIds.length}/${targetMediaUrls.length}`);
+
     if (childContainerIds.length === 0 || !successfulBaseUrl) {
-      throw new Error(lastErrorMessage || "Failed to create carousel media containers");
+      console.error(`[Instagram] ABORT: No child containers created. Last error: ${lastErrorMessage}`);
+      throw new Error(lastErrorMessage || "Failed to create carousel media containers — all child container creation attempts failed");
     }
 
     // Now create the parent Carousel container
+    console.log(`[Instagram] Creating parent carousel container with children: ${childContainerIds.join(",")}`);
     for (const baseEndpoint of hostEndpoints) {
       try {
-        const carouselUrl = new URL(`${baseEndpoint}/media`);
-        carouselUrl.searchParams.set("access_token", accessToken);
-        carouselUrl.searchParams.set("media_type", "CAROUSEL");
-        carouselUrl.searchParams.set("children", childContainerIds.join(","));
-        if (caption) carouselUrl.searchParams.set("caption", caption);
+        // Use POST body instead of query params
+        const requestBody = new URLSearchParams();
+        requestBody.set("access_token", accessToken);
+        requestBody.set("media_type", "CAROUSEL");
+        requestBody.set("children", childContainerIds.join(","));
+        if (caption) requestBody.set("caption", caption);
 
-        const res = await fetch(carouselUrl.toString(), { method: "POST" });
+        const res = await fetch(`${baseEndpoint}/media`, {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: requestBody.toString(),
+        });
         const data = await res.json();
         if (res.ok && data.id) {
           creationId = data.id;
           successfulBaseUrl = baseEndpoint;
+          console.log(`[Instagram] Parent carousel container created: ${data.id}`);
           break;
         } else {
-          lastErrorMessage = data.error?.message || "Carousel parent container creation failed";
+          const apiError = data.error?.message || data.error?.type || JSON.stringify(data);
+          console.error(`[Instagram] Parent carousel failed at ${baseEndpoint}: ${apiError}`);
+          lastErrorMessage = apiError;
         }
       } catch (err: any) {
+        console.error(`[Instagram] Parent carousel exception at ${baseEndpoint}:`, err.message);
         lastErrorMessage = err.message;
       }
     }
@@ -565,33 +604,44 @@ export async function publishInstagramMedia({
       mediaType === "REELS" ||
       Boolean(singleUrl.match(/\.(mp4|mov|webm)$/i));
 
+    console.log(`[Instagram] Creating single ${isVideo ? "VIDEO/REELS" : "IMAGE"} container (url: ${singleUrl.substring(0, 80)}...)`);
+
     for (const baseEndpoint of hostEndpoints) {
       try {
-        const containerUrl = new URL(`${baseEndpoint}/media`);
-        containerUrl.searchParams.set("access_token", accessToken);
+        // Use POST body instead of query params
+        const requestBody = new URLSearchParams();
+        requestBody.set("access_token", accessToken);
 
         if (isVideo) {
-          containerUrl.searchParams.set("media_type", "REELS");
-          containerUrl.searchParams.set("video_url", singleUrl);
+          requestBody.set("media_type", "REELS");
+          requestBody.set("video_url", singleUrl);
         } else {
-          containerUrl.searchParams.set("image_url", singleUrl);
+          requestBody.set("image_url", singleUrl);
         }
 
         if (caption) {
-          containerUrl.searchParams.set("caption", caption);
+          requestBody.set("caption", caption);
         }
 
-        const res = await fetch(containerUrl.toString(), { method: "POST" });
+        const res = await fetch(`${baseEndpoint}/media`, {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: requestBody.toString(),
+        });
         const data = await res.json();
 
         if (res.ok && data.id) {
           creationId = data.id;
           successfulBaseUrl = baseEndpoint;
+          console.log(`[Instagram] Single media container created: ${data.id}`);
           break;
         } else {
-          lastErrorMessage = data.error?.message || "Container creation failed";
+          const apiError = data.error?.message || data.error?.type || JSON.stringify(data);
+          console.error(`[Instagram] Single media failed at ${baseEndpoint}: ${apiError}`);
+          lastErrorMessage = apiError;
         }
       } catch (err: any) {
+        console.error(`[Instagram] Single media exception at ${baseEndpoint}:`, err.message);
         lastErrorMessage = err.message || "Network error during container creation";
       }
     }
@@ -611,6 +661,7 @@ export async function publishInstagramMedia({
     Boolean(targetMediaUrls[0]?.match(/\.(mp4|mov|webm)$/i));
 
   if (isVideoOrCarousel) {
+    console.log(`[Instagram] Waiting for media processing (ID: ${creationId})...`);
     let isReady = false;
     let attempts = 0;
     const maxAttempts = 20;
@@ -628,16 +679,25 @@ export async function publishInstagramMedia({
         const statusData = await statusRes.json();
 
         if (statusData.status_code === "FINISHED") {
+          console.log(`[Instagram] Media processing complete after ${attempts} attempts`);
           isReady = true;
           break;
         } else if (statusData.status_code === "ERROR" || statusData.status_code === "EXPIRED") {
+          console.error(`[Instagram] Media processing FAILED: ${statusData.status || statusData.status_code}`);
           throw new Error(
             `Media processing failed on Instagram: ${statusData.status || statusData.status_code}`
           );
+        } else {
+          console.log(`[Instagram] Processing status: ${statusData.status_code} (attempt ${attempts}/${maxAttempts})`);
         }
       } catch (e: any) {
+        console.error(`[Instagram] Status check error (attempt ${attempts}):`, e.message);
         if (attempts >= maxAttempts) throw e;
       }
+    }
+
+    if (!isReady) {
+      console.error(`[Instagram] Media processing timed out after ${maxAttempts} attempts`);
     }
   } else {
     await delay(1500);

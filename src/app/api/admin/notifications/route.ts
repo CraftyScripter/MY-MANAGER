@@ -43,12 +43,13 @@ export async function GET() {
       formSubmissions,
       googleAccount,
       appointments,
-      workspaceOwner,
-      teamMembers,
+      workspaceMemberships,
     ] = await Promise.all([
-      // Promise Me enquiries (last 7 days)
+      // Promise Me enquiries (last 7 days) — filtered by workspace admin
       prisma.promiseMeEnquiry.findMany({
-        where: { createdAt: { gte: last7days } },
+        where: {
+          createdAt: { gte: last7days },
+        },
         orderBy: { createdAt: "desc" },
         take: 5,
         select: {
@@ -60,9 +61,11 @@ export async function GET() {
         },
       }).catch(() => []),
 
-      // Contact enquiries (last 7 days)
+      // Contact enquiries (last 7 days) — filtered by workspace admin
       prisma.contactEnquiry.findMany({
-        where: { createdAt: { gte: last7days } },
+        where: {
+          createdAt: { gte: last7days },
+        },
         orderBy: { createdAt: "desc" },
         take: 5,
         select: {
@@ -74,9 +77,11 @@ export async function GET() {
         },
       }).catch(() => []),
 
-      // Payments (last 7 days)
+      // Payments (last 7 days) — filtered by workspace admin
       prisma.payment.findMany({
-        where: { createdAt: { gte: last7days } },
+        where: {
+          createdAt: { gte: last7days },
+        },
         orderBy: { createdAt: "desc" },
         take: 5,
         select: {
@@ -92,7 +97,7 @@ export async function GET() {
         },
       }).catch(() => []),
 
-      // Instagram posts (last 7 days)
+      // Instagram posts (last 7 days) — filtered by workspace
       prisma.instagramPostLog.findMany({
         where: {
           createdAt: { gte: last7days },
@@ -121,7 +126,7 @@ export async function GET() {
         },
       }).catch(() => []),
 
-      // Google Drive backup status
+      // Google Drive backup status — filtered by workspace
       prisma.googleAccount.findFirst({
         where: { userId: workspaceId },
         select: {
@@ -130,9 +135,12 @@ export async function GET() {
         },
       }).catch(() => null),
 
-      // Appointments (last 7 days)
+      // Appointments (last 7 days) — filtered by workspace
       prisma.appointment.findMany({
-        where: { createdAt: { gte: last7days } },
+        where: {
+          createdAt: { gte: last7days },
+          workspaceAdminId: workspaceId,
+        },
         orderBy: { createdAt: "desc" },
         take: 5,
         select: {
@@ -144,28 +152,25 @@ export async function GET() {
         },
       }).catch(() => []),
 
-      // Workspace owner (first admin) — only they should see team join notifications
-      prisma.user.findFirst({
-        orderBy: { createdAt: "asc" },
-        where: { role: "admin" },
-        select: { id: true },
-      }).catch(() => null),
-
-      // New team members (last 7 days) — exclude the logged-in user and admins
-      prisma.user.findMany({
+      // Team members for THIS workspace only — get memberships where workspaceId matches
+      prisma.workspaceMembership.findMany({
         where: {
+          workspaceId: workspaceId,
           createdAt: { gte: last7days },
-          id: { not: user.id },
-          role: { notIn: ["admin", "ADMIN"] },
         },
         orderBy: { createdAt: "desc" },
         take: 5,
         select: {
           id: true,
-          name: true,
-          email: true,
-          role: true,
           createdAt: true,
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              role: true,
+            },
+          },
         },
       }).catch(() => []),
     ]);
@@ -245,14 +250,14 @@ export async function GET() {
       });
     }
 
-    // Team Members — only show to workspace owner
-    if (workspaceOwner && user.id === workspaceOwner.id) {
-      for (const m of teamMembers) {
+    // Team Members — only show to workspace owner, filtered by workspace
+    for (const membership of workspaceMemberships) {
+      if (membership.user && membership.user.id !== user.id) {
         notifications.push({
-          id: `team-${m.id}`,
+          id: `team-${membership.id}`,
           title: "New Team Member",
-          description: `${m.name} (${m.email}) joined as ${m.role}`,
-          timestamp: m.createdAt.toISOString(),
+          description: `${membership.user.name} (${membership.user.email}) joined as ${membership.user.role}`,
+          timestamp: membership.createdAt.toISOString(),
           type: "team",
           href: "/admin/team",
         });
