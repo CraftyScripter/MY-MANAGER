@@ -22,6 +22,7 @@ export default function FormBridgePage() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newProject, setNewProject] = useState({ name: "", description: "" });
   const [creating, setCreating] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState<{ id: string; name: string } | null>(null);
 
   const fetchProjects = useCallback(async () => {
     try {
@@ -66,13 +67,18 @@ export default function FormBridgePage() {
   };
 
   const handleDelete = async (id: string, name: string) => {
-    if (!confirm(`Are you sure you want to delete "${name}"? This will permanently remove all submissions and data.`)) return;
+    setConfirmDelete({ id, name });
+  };
 
+  const confirmDeleteAction = async () => {
+    if (!confirmDelete) return;
     try {
-      const res = await fetch(`/api/admin/forms/projects/${id}`, { method: "DELETE" });
+      const res = await fetch(`/api/admin/forms/projects/${confirmDelete.id}`, { method: "DELETE" });
       if (res.ok) fetchProjects();
     } catch (err) {
       console.error("Failed to delete project:", err);
+    } finally {
+      setConfirmDelete(null);
     }
   };
 
@@ -355,6 +361,37 @@ export default function FormBridgePage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Confirm Delete Modal */}
+      {confirmDelete && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-[#111114] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-6 max-w-sm w-full shadow-2xl">
+            <div className="w-12 h-12 rounded-2xl bg-red-500/10 border border-red-500/20 text-red-500 flex items-center justify-center mx-auto mb-4">
+              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+              </svg>
+            </div>
+            <h2 className="text-lg font-bold text-zinc-900 dark:text-white text-center mb-2">Delete Project?</h2>
+            <p className="text-sm text-zinc-500 text-center mb-6">
+              Are you sure you want to delete <strong className="text-zinc-700 dark:text-zinc-300">"{confirmDelete.name}"</strong>? This will permanently remove all submissions and data.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setConfirmDelete(null)}
+                className="flex-1 px-4 py-2.5 rounded-xl text-sm font-semibold bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDeleteAction}
+                className="flex-1 px-4 py-2.5 rounded-xl text-sm font-semibold bg-red-600 text-white hover:bg-red-700 transition cursor-pointer"
+              >
+                Delete
+              </button>
+            </div>
           </div>
         </div>
       )}
