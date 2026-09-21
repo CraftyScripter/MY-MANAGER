@@ -1866,11 +1866,11 @@ function InstagramContent() {
                   </div>
 
                   <textarea
-                    rows={4}
+                    rows={8}
                     value={captionInput}
                     onChange={(e) => setCaptionInput(e.target.value)}
                     placeholder="Write an engaging caption with hashtags..."
-                    className="w-full p-3 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl text-xs text-zinc-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-rose-500 resize-none leading-relaxed"
+                    className="w-full p-3 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl text-xs text-zinc-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-rose-500 resize-y leading-relaxed min-h-[120px] max-h-[300px]"
                   />
 
                   {/* Hashtag Quick Chips */}
@@ -1963,7 +1963,7 @@ function InstagramContent() {
                 </p>
 
                 {/* Instagram Mockup Card */}
-                <div className="w-full max-w-[280px] bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-xl overflow-hidden text-zinc-900 dark:text-white">
+                <div className="w-full max-w-[340px] bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-xl overflow-hidden text-zinc-900 dark:text-white">
                   {/* Mockup Header */}
                   <div className="p-3 flex items-center justify-between border-b border-zinc-100 dark:border-zinc-800">
                     <div className="flex items-center gap-2">
@@ -2107,7 +2107,7 @@ function InstagramContent() {
                       </svg>
                     </div>
 
-                    <p className="text-[11px] text-zinc-800 dark:text-zinc-200 line-clamp-2">
+                    <p className="text-[11px] text-zinc-800 dark:text-zinc-200 line-clamp-4">
                       <strong className="font-bold text-zinc-900 dark:text-white mr-1">
                         {currentAccount?.username || ""}
                       </strong>
