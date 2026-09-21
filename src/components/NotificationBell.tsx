@@ -32,6 +32,7 @@ function timeAgo(dateString: string): string {
 export default function NotificationBell() {
   const [notifications, setNotifications] = useState<SystemNotification[]>([]);
   const [readIds, setReadIds] = useState<Set<string>>(new Set());
+  const [notificationsClearedAt, setNotificationsClearedAt] = useState<Date | null>(null);
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [popupStyle, setPopupStyle] = useState<React.CSSProperties>({});
@@ -65,12 +66,16 @@ export default function NotificationBell() {
     });
   }, []);
 
-  // Load readIds from localStorage
+  // Load readIds and clearedAt from localStorage
   useEffect(() => {
     try {
       const stored = localStorage.getItem("pm_read_notifications");
       if (stored) {
         setReadIds(new Set(JSON.parse(stored)));
+      }
+      const clearedAt = localStorage.getItem("pm_notifications_cleared_at");
+      if (clearedAt) {
+        setNotificationsClearedAt(new Date(clearedAt));
       }
     } catch {}
   }, []);
@@ -81,14 +86,24 @@ export default function NotificationBell() {
       const res = await fetch("/api/admin/notifications");
       if (res.ok) {
         const data = await res.json();
-        setNotifications(data.notifications || []);
+        const allNotifications = data.notifications || [];
+        // Filter out notifications that were cleared
+        if (notificationsClearedAt) {
+          setNotifications(
+            allNotifications.filter(
+              (n: SystemNotification) => new Date(n.timestamp) > notificationsClearedAt
+            )
+          );
+        } else {
+          setNotifications(allNotifications);
+        }
       }
     } catch {
       // Ignore network errors
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [notificationsClearedAt]);
 
   useEffect(() => {
     fetchNotifications();
@@ -145,10 +160,13 @@ export default function NotificationBell() {
   };
 
   const clearAllNotifications = () => {
+    const now = new Date();
     setNotifications([]);
     setReadIds(new Set());
+    setNotificationsClearedAt(now);
     try {
       localStorage.removeItem("pm_read_notifications");
+      localStorage.setItem("pm_notifications_cleared_at", now.toISOString());
     } catch {}
   };
 
