@@ -504,14 +504,23 @@ export async function publishInstagramMedia({
       const isItemVideo = urlItem.match(/\.(mp4|mov|webm)$/i);
       let itemContainerId: string | null = null;
 
+      // Normalize Google Drive stream URLs to high-speed public CDN URLs for Instagram
+      let effectiveUrlItem = urlItem;
+      if (!isItemVideo) {
+        const driveMatch = urlItem.match(/\/api\/public\/media\/([a-zA-Z0-9_-]+)/);
+        if (driveMatch && driveMatch[1]) {
+          effectiveUrlItem = `https://lh3.googleusercontent.com/d/${driveMatch[1]}`;
+        }
+      }
+
       // Validate URL
-      if (!urlItem || !urlItem.startsWith("http")) {
-        console.error(`[Instagram] Invalid media URL at index ${i}: ${urlItem?.substring(0, 100)}`);
+      if (!effectiveUrlItem || !effectiveUrlItem.startsWith("http")) {
+        console.error(`[Instagram] Invalid media URL at index ${i}: ${effectiveUrlItem?.substring(0, 100)}`);
         lastErrorMessage = `Invalid media URL at index ${i}: must be a publicly accessible HTTP/HTTPS URL`;
         continue;
       }
 
-      console.log(`[Instagram] Creating child container ${i + 1}/${targetMediaUrls.length} (type: ${isItemVideo ? "VIDEO" : "IMAGE"}, url: ${urlItem.substring(0, 80)}...)`);
+      console.log(`[Instagram] Creating child container ${i + 1}/${targetMediaUrls.length} (type: ${isItemVideo ? "VIDEO" : "IMAGE"}, url: ${effectiveUrlItem.substring(0, 80)}...)`);
 
       for (const baseEndpoint of hostEndpoints) {
         try {
@@ -522,9 +531,9 @@ export async function publishInstagramMedia({
 
           if (isItemVideo) {
             requestBody.set("media_type", "VIDEO");
-            requestBody.set("video_url", urlItem);
+            requestBody.set("video_url", effectiveUrlItem);
           } else {
-            requestBody.set("image_url", urlItem);
+            requestBody.set("image_url", effectiveUrlItem);
           }
 
           const res = await fetch(`${baseEndpoint}/media`, {
@@ -568,19 +577,22 @@ export async function publishInstagramMedia({
     console.log(`[Instagram] Creating parent carousel container with children: ${childContainerIds.join(",")}`);
     for (const baseEndpoint of hostEndpoints) {
       try {
-        // Use POST body instead of query params
-        const requestBody = new URLSearchParams();
-        requestBody.set("access_token", accessToken);
-        requestBody.set("media_type", "CAROUSEL");
-        requestBody.set("children", childContainerIds.join(","));
-        if (caption) requestBody.set("caption", caption);
+        const parentBody = new URLSearchParams();
+        parentBody.set("access_token", accessToken);
+        parentBody.set("media_type", "CAROUSEL");
+        parentBody.set("children", childContainerIds.join(","));
+
+        if (caption) {
+          parentBody.set("caption", caption);
+        }
 
         const res = await fetch(`${baseEndpoint}/media`, {
           method: "POST",
           headers: { "Content-Type": "application/x-www-form-urlencoded" },
-          body: requestBody.toString(),
+          body: parentBody.toString(),
         });
         const data = await res.json();
+
         if (res.ok && data.id) {
           creationId = data.id;
           successfulBaseUrl = baseEndpoint;
@@ -588,7 +600,7 @@ export async function publishInstagramMedia({
           break;
         } else {
           const apiError = data.error?.message || data.error?.type || JSON.stringify(data);
-          console.error(`[Instagram] Parent carousel failed at ${baseEndpoint}: ${apiError}`);
+          console.error(`[Instagram] Parent carousel creation failed at ${baseEndpoint}: ${apiError}`);
           lastErrorMessage = apiError;
         }
       } catch (err: any) {
@@ -604,7 +616,15 @@ export async function publishInstagramMedia({
       mediaType === "REELS" ||
       Boolean(singleUrl.match(/\.(mp4|mov|webm)$/i));
 
-    console.log(`[Instagram] Creating single ${isVideo ? "VIDEO/REELS" : "IMAGE"} container (url: ${singleUrl.substring(0, 80)}...)`);
+    let effectiveSingleUrl = singleUrl;
+    if (!isVideo) {
+      const driveMatch = singleUrl.match(/\/api\/public\/media\/([a-zA-Z0-9_-]+)/);
+      if (driveMatch && driveMatch[1]) {
+        effectiveSingleUrl = `https://lh3.googleusercontent.com/d/${driveMatch[1]}`;
+      }
+    }
+
+    console.log(`[Instagram] Creating single ${isVideo ? "VIDEO/REELS" : "IMAGE"} container (url: ${effectiveSingleUrl.substring(0, 80)}...)`);
 
     for (const baseEndpoint of hostEndpoints) {
       try {
@@ -614,9 +634,9 @@ export async function publishInstagramMedia({
 
         if (isVideo) {
           requestBody.set("media_type", "REELS");
-          requestBody.set("video_url", singleUrl);
+          requestBody.set("video_url", effectiveSingleUrl);
         } else {
-          requestBody.set("image_url", singleUrl);
+          requestBody.set("image_url", effectiveSingleUrl);
         }
 
         if (caption) {

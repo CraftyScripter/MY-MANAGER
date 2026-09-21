@@ -484,6 +484,21 @@ function InstagramContent() {
     });
   };
 
+  // Helper to reliably resolve media display URL for browser preview
+  const getMediaDisplayUrl = (url: string) => {
+    if (!url) return "";
+    const match = uploadedMediaItems.find((it) => it.previewUrl === url || it.serverUrl === url);
+    if (match?.previewUrl) return match.previewUrl;
+
+    // Convert any Google Drive stream URL or trycloudflare URL to Google direct CDN
+    const driveMatch = url.match(/\/api\/public\/media\/([a-zA-Z0-9_-]+)/);
+    if (driveMatch && driveMatch[1]) {
+      return `https://lh3.googleusercontent.com/d/${driveMatch[1]}`;
+    }
+
+    return url;
+  };
+
   const processUploadedFiles = async (files: FileList | File[]) => {
     const fileArray = Array.from(files);
     if (fileArray.length === 0) return;
@@ -505,13 +520,7 @@ function InstagramContent() {
       setPostMediaType("CAROUSEL");
       setUploadedMediaItems((prev) => [...prev, ...newItems]);
       const newUrls = newItems.map((it) => it.previewUrl);
-      setCarouselUrls((prev) => {
-        const combined = [...prev, ...newUrls];
-        if (!mediaUrlInput && combined.length > 0) {
-          setMediaUrlInput(combined[0]);
-        }
-        return combined;
-      });
+      setCarouselUrls((prev) => [...prev, ...newUrls]);
     } else {
       const single = newItems[0];
       setPostMediaType(single.type === "VIDEO" ? "VIDEO" : "IMAGE");
@@ -553,10 +562,11 @@ function InstagramContent() {
             )
           );
 
-          setCarouselUrls((prev) =>
-            prev.map((u) => (u === item.previewUrl ? serverUrl : u))
-          );
-          setMediaUrlInput((prev) => (prev === item.previewUrl ? serverUrl : prev));
+          // Keep previewUrl in carouselUrls so browser preview is always 0ms instant and never broken.
+          // Store serverUrl in uploadedMediaItems so handleSubmitPost submits the real serverUrl.
+          if (postMediaType !== "CAROUSEL") {
+            setMediaUrlInput(serverUrl);
+          }
         } catch (uploadErr: any) {
           console.error("File upload error:", uploadErr);
           setUploadedMediaItems((prev) =>
@@ -637,15 +647,26 @@ function InstagramContent() {
       postMediaType === "CAROUSEL"
         ? carouselUrls
             .map((u) => {
-              const match = uploadedMediaItems.find((it) => it.previewUrl === u);
-              return match?.serverUrl || u;
+              const match = uploadedMediaItems.find((it) => it.previewUrl === u || it.serverUrl === u);
+              const targetUrl = match?.serverUrl || u;
+              // If it's a Google Drive stream URL for an image, normalize to Google's public direct CDN
+              const driveMatch = targetUrl.match(/\/api\/public\/media\/([a-zA-Z0-9_-]+)/);
+              if (driveMatch && driveMatch[1] && !targetUrl.match(/\.(mp4|mov|webm)$/i)) {
+                return `https://lh3.googleusercontent.com/d/${driveMatch[1]}`;
+              }
+              return targetUrl;
             })
             .filter(Boolean)
         : mediaUrlInput.trim()
-        ? [
-            uploadedMediaItems.find((it) => it.previewUrl === mediaUrlInput.trim())?.serverUrl ||
-              mediaUrlInput.trim(),
-          ]
+        ? (() => {
+            const singleMatch = uploadedMediaItems.find((it) => it.previewUrl === mediaUrlInput.trim() || it.serverUrl === mediaUrlInput.trim());
+            const targetUrl = singleMatch?.serverUrl || mediaUrlInput.trim();
+            const driveMatch = targetUrl.match(/\/api\/public\/media\/([a-zA-Z0-9_-]+)/);
+            if (driveMatch && driveMatch[1] && !targetUrl.match(/\.(mp4|mov|webm)$/i)) {
+              return [`https://lh3.googleusercontent.com/d/${driveMatch[1]}`];
+            }
+            return [targetUrl];
+          })()
         : [];
 
     if (effectiveUrls.length === 0) {
@@ -1669,10 +1690,14 @@ function InstagramContent() {
                           {/* Carousel Slides Horizontal Grid */}
                           <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2.5 max-h-56 overflow-y-auto p-1">
                             {carouselUrls.map((url, i) => {
+                              const matchItem = uploadedMediaItems.find(
+                                (it) => it.previewUrl === url || it.serverUrl === url
+                              );
                               const isVid =
                                 Boolean(url.match(/\.(mp4|mov|webm)$/i)) ||
-                                uploadedMediaItems.find((it) => it.previewUrl === url || it.serverUrl === url)?.type === "VIDEO";
+                                matchItem?.type === "VIDEO";
                               const isSelected = previewSlideIdx === i;
+                              const displaySrc = getMediaDisplayUrl(url);
 
                               return (
                                 <div
@@ -1685,9 +1710,18 @@ function InstagramContent() {
                                   }`}
                                 >
                                   {isVid ? (
-                                    <video src={url} className="w-full h-full object-cover" muted />
+                                    <video src={displaySrc} className="w-full h-full object-cover" muted />
                                   ) : (
-                                    <img src={url} alt={`Slide ${i + 1}`} className="w-full h-full object-cover" />
+                                    <img
+                                      src={displaySrc}
+                                      alt={`Slide ${i + 1}`}
+                                      className="w-full h-full object-cover"
+                                      onError={(e) => {
+                                        if (matchItem?.previewUrl && e.currentTarget.src !== matchItem.previewUrl) {
+                                          e.currentTarget.src = matchItem.previewUrl;
+                                        }
+                                      }}
+                                    />
                                   )}
 
                                   {/* Slide Number Badge */}
@@ -1751,7 +1785,7 @@ function InstagramContent() {
                     /* Case 2: REEL / VIDEO PREVIEW CARD */
                     <div className="p-3.5 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-2xl flex items-center gap-3.5">
                       <div className="relative w-16 h-20 rounded-xl overflow-hidden border border-zinc-200 dark:border-zinc-800 bg-black shrink-0">
-                        <video src={mediaUrlInput} className="w-full h-full object-cover" muted playsInline />
+                        <video src={getMediaDisplayUrl(mediaUrlInput || uploadedMediaItems[0]?.previewUrl || "")} className="w-full h-full object-cover" muted playsInline />
                         <span className="absolute bottom-1 left-1 px-1 rounded bg-black/70 text-white text-[9px] font-bold">
                           ▶ Reel
                         </span>
@@ -1801,7 +1835,17 @@ function InstagramContent() {
                     /* Case 3: SINGLE PHOTO PREVIEW CARD */
                     <div className="p-3.5 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-2xl flex items-center gap-3.5">
                       <div className="relative w-16 h-16 rounded-xl overflow-hidden border border-zinc-200 dark:border-zinc-800 bg-zinc-100 dark:bg-zinc-900 shrink-0">
-                        <img src={mediaUrlInput} alt="Uploaded" className="w-full h-full object-cover" />
+                        <img
+                          src={getMediaDisplayUrl(mediaUrlInput || uploadedMediaItems[0]?.previewUrl || "")}
+                          alt="Uploaded"
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            const fallback = uploadedMediaItems[0]?.previewUrl;
+                            if (fallback && e.currentTarget.src !== fallback) {
+                              e.currentTarget.src = fallback;
+                            }
+                          }}
+                        />
                       </div>
 
                       <div className="flex-1 min-w-0 space-y-1">
@@ -1887,7 +1931,7 @@ function InstagramContent() {
                       onChange={(e) => {
                         const val = e.target.value;
                         setMediaUrlInput(val);
-                        if (postMediaType === "CAROUSEL" && val) {
+                        if (postMediaType === "CAROUSEL" && val && uploadedMediaItems.length === 0) {
                           setCarouselUrls([val]);
                         }
                       }}
@@ -2044,16 +2088,20 @@ function InstagramContent() {
                     {postMediaType === "CAROUSEL" && carouselUrls.length > 0 ? (
                       (() => {
                         const currentSlideUrl = carouselUrls[previewSlideIdx] || carouselUrls[0];
+                        const matchItem = uploadedMediaItems.find(
+                          (it) => it.previewUrl === currentSlideUrl || it.serverUrl === currentSlideUrl
+                        );
                         const isSlideVideo =
                           Boolean(currentSlideUrl?.match(/\.(mp4|mov|webm)$/i)) ||
-                          uploadedMediaItems.find((it) => it.previewUrl === currentSlideUrl || it.serverUrl === currentSlideUrl)?.type === "VIDEO";
+                          matchItem?.type === "VIDEO";
+                        const displaySlideUrl = getMediaDisplayUrl(currentSlideUrl);
 
                         return (
                           <>
                             {isSlideVideo ? (
                               <video
-                                key={currentSlideUrl}
-                                src={currentSlideUrl}
+                                key={displaySlideUrl}
+                                src={displaySlideUrl}
                                 className="w-full h-full object-cover"
                                 autoPlay
                                 loop
@@ -2062,10 +2110,15 @@ function InstagramContent() {
                               />
                             ) : (
                               <img
-                                key={currentSlideUrl}
-                                src={currentSlideUrl}
+                                key={displaySlideUrl}
+                                src={displaySlideUrl}
                                 alt={`Slide ${previewSlideIdx + 1}`}
                                 className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  if (matchItem?.previewUrl && e.currentTarget.src !== matchItem.previewUrl) {
+                                    e.currentTarget.src = matchItem.previewUrl;
+                                  }
+                                }}
                               />
                             )}
 
@@ -2124,13 +2177,23 @@ function InstagramContent() {
                     ) : mediaUrlInput ? (
                       postMediaType === "VIDEO" ? (
                         <div className="relative w-full h-full">
-                          <video src={mediaUrlInput} className="w-full h-full object-cover" autoPlay loop muted playsInline />
+                          <video src={getMediaDisplayUrl(mediaUrlInput)} className="w-full h-full object-cover" autoPlay loop muted playsInline />
                           <span className="absolute bottom-2 left-2 px-1.5 py-0.5 rounded bg-black/60 text-white text-[10px] font-bold">
                             ▶ Reel
                           </span>
                         </div>
                       ) : (
-                        <img src={mediaUrlInput} alt="Preview" className="w-full h-full object-cover" />
+                        <img
+                          src={getMediaDisplayUrl(mediaUrlInput)}
+                          alt="Preview"
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            const fallback = uploadedMediaItems[0]?.previewUrl;
+                            if (fallback && e.currentTarget.src !== fallback) {
+                              e.currentTarget.src = fallback;
+                            }
+                          }}
+                        />
                       )
                     ) : (
                       <div className="text-center p-6 text-zinc-400">

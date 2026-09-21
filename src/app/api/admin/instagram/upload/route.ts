@@ -91,16 +91,8 @@ export async function POST(request: NextRequest) {
 
     // Resolve public origin for URLs:
     let publicOrigin = "";
-    if (process.env.INSTAGRAM_REDIRECT_URI) {
-      try {
-        const tunnelUrl = new URL(process.env.INSTAGRAM_REDIRECT_URI);
-        if (tunnelUrl.hostname && !tunnelUrl.hostname.includes("localhost")) {
-          publicOrigin = tunnelUrl.origin;
-        }
-      } catch {}
-    }
 
-    if (!publicOrigin && process.env.NEXT_PUBLIC_APP_URL && !process.env.NEXT_PUBLIC_APP_URL.includes("localhost")) {
+    if (process.env.NEXT_PUBLIC_APP_URL && !process.env.NEXT_PUBLIC_APP_URL.includes("localhost")) {
       publicOrigin = process.env.NEXT_PUBLIC_APP_URL;
     }
 
@@ -129,9 +121,16 @@ export async function POST(request: NextRequest) {
         });
 
         if (driveFile?.fileId) {
+          // For photos, Google's direct CDN URL (lh3.googleusercontent.com/d/:fileId) is globally accessible,
+          // extremely fast, and works seamlessly with Meta Instagram Graph API without requiring tunnels.
+          const driveDirectUrl = !isVideo ? `https://lh3.googleusercontent.com/d/${driveFile.fileId}` : "";
           const streamUrl = `${publicOrigin}/api/public/media/${driveFile.fileId}?adminId=${workspaceId}`;
+          const effectiveUrl = driveDirectUrl || streamUrl;
+
           return NextResponse.json({
-            url: streamUrl,
+            url: effectiveUrl,
+            directUrl: driveDirectUrl || null,
+            streamUrl,
             driveFileId: driveFile.fileId,
             webViewLink: driveFile.webViewLink,
             publicId: driveFile.fileId,
