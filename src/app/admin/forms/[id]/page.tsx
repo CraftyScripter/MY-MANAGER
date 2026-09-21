@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import DropdownSelect from "@/components/DropdownSelect";
 
 interface SchemaField {
   key: string;
@@ -543,19 +544,19 @@ export default function FormProjectDetailPage() {
                     </div>
                     <div>
                       <label className="block text-[10px] font-bold text-zinc-500 uppercase mb-1">Type</label>
-                      <select
+                      <DropdownSelect
                         value={field.type}
-                        onChange={(e) =>
-                          updateField(index, { type: e.target.value as SchemaField["type"] })
+                        onChange={(val) =>
+                          updateField(index, { type: val as SchemaField["type"] })
                         }
-                        className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 py-1.5 text-xs text-zinc-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
-                      >
-                        {FIELD_TYPES.map((t) => (
-                          <option key={t.value} value={t.value}>
-                            {t.label}
-                          </option>
-                        ))}
-                      </select>
+                        options={FIELD_TYPES}
+                        size="sm"
+                        accentColor="blue"
+                        align="left"
+                        minWidth="140px"
+                        className="w-full"
+                        buttonClassName="w-full justify-between bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800"
+                      />
                     </div>
                     <div className="flex items-end gap-2">
                       <label className="flex items-center gap-1.5 text-xs text-zinc-600 dark:text-zinc-400 cursor-pointer">

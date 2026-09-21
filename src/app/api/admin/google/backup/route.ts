@@ -32,8 +32,17 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const files = await listBackupFiles();
-    return NextResponse.json({ backups: files });
+    try {
+      const files = await listBackupFiles();
+      return NextResponse.json({ backups: files });
+    } catch (driveErr: any) {
+      // If Google Drive is not connected or folder not found, return empty list with message
+      console.warn("Backup list fetch failed:", driveErr?.message);
+      return NextResponse.json({
+        backups: [],
+        message: driveErr?.message || "Unable to fetch backups. Make sure Google Drive is connected.",
+      });
+    }
   } catch (error: any) {
     console.error("List backups error:", error);
     return NextResponse.json(

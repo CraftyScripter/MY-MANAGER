@@ -35,47 +35,47 @@ interface TeamMember {
 }
 
 const CATEGORIES = [
-  { value: "DEVELOPMENT", label: "Development", icon: "💻", color: "bg-blue-500/10 text-blue-400 border-blue-500/20" },
-  { value: "SOCIAL_MEDIA", label: "Social Media", icon: "📱", color: "bg-pink-500/10 text-pink-400 border-pink-500/20" },
-  { value: "LEAD_GENERATION", label: "Lead Generation", icon: "🎯", color: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" },
-  { value: "OPERATIONS", label: "Operations", icon: "⚙️", color: "bg-amber-500/10 text-amber-400 border-amber-500/20" },
-  { value: "UI_UX_DESIGN", label: "UI/UX Design", icon: "🎨", color: "bg-purple-500/10 text-purple-400 border-purple-500/20" },
-  { value: "PERSONAL_ADMIN", label: "Personal Admin", icon: "🔒", color: "bg-indigo-500/10 text-indigo-400 border-indigo-500/20" },
+  { value: "DEVELOPMENT", label: "Development", icon: "💻", color: "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20" },
+  { value: "SOCIAL_MEDIA", label: "Social Media", icon: "📱", color: "bg-pink-500/10 text-pink-600 dark:text-pink-400 border-pink-500/20" },
+  { value: "LEAD_GENERATION", label: "Lead Generation", icon: "🎯", color: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20" },
+  { value: "OPERATIONS", label: "Operations", icon: "⚙️", color: "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20" },
+  { value: "UI_UX_DESIGN", label: "UI/UX Design", icon: "🎨", color: "bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20" },
+  { value: "PERSONAL_ADMIN", label: "Personal Admin", icon: "🔒", color: "bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/20" },
 ];
 
 const PRIORITIES = [
-  { value: "LOW", label: "Low", icon: "🟢", badge: "LOW", badgeClass: "bg-emerald-500/10 text-emerald-400 border-emerald-500/30", color: "text-emerald-400 bg-emerald-500/10 border-emerald-500/20" },
-  { value: "MEDIUM", label: "Medium", icon: "🟡", badge: "MED", badgeClass: "bg-amber-500/10 text-amber-400 border-amber-500/30", color: "text-amber-400 bg-amber-500/10 border-amber-500/20" },
-  { value: "HIGH", label: "High", icon: "🟠", badge: "HIGH", badgeClass: "bg-orange-500/10 text-orange-400 border-orange-500/30", color: "text-orange-400 bg-orange-500/10 border-orange-500/20" },
-  { value: "URGENT", label: "Urgent", icon: "🔴", badge: "CRITICAL", badgeClass: "bg-rose-500/10 text-rose-400 border-rose-500/30", color: "text-rose-400 bg-rose-500/10 border-rose-500/20" },
+  { value: "LOW", label: "Low", icon: "🟢", badge: "LOW", badgeClass: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30", color: "text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border-emerald-500/20" },
+  { value: "MEDIUM", label: "Medium", icon: "🟡", badge: "MED", badgeClass: "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30", color: "text-amber-600 dark:text-amber-400 bg-amber-500/10 border-amber-500/20" },
+  { value: "HIGH", label: "High", icon: "🟠", badge: "HIGH", badgeClass: "bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/30", color: "text-orange-600 dark:text-orange-400 bg-orange-500/10 border-orange-500/20" },
+  { value: "URGENT", label: "Urgent", icon: "🔴", badge: "CRITICAL", badgeClass: "bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/30", color: "text-rose-600 dark:text-rose-400 bg-rose-500/10 border-rose-500/20" },
 ];
 
 const SAMPLE_PROMPTS = [
   {
     icon: "🎨",
     tag: "Instagram Post",
-    tagClass: "bg-pink-500/10 text-pink-400 border-pink-500/20",
+    tagClass: "bg-pink-500/10 text-pink-600 dark:text-pink-400 border-pink-500/20",
     title: "Client Instagram Post",
     prompt: "Client X ke liye Instagram post design karna hai, Rohit ko assign karo, kal sham 5 PM tak complete chahiye",
   },
   {
     icon: "🛂",
     tag: "Personal",
-    tagClass: "bg-purple-500/10 text-purple-400 border-purple-500/20",
+    tagClass: "bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20",
     title: "Passport Renewal",
     prompt: "Mera personal task hai: passport renewal form submit karna, next Monday tak",
   },
   {
     icon: "💳",
     tag: "Bug Fix",
-    tagClass: "bg-rose-500/10 text-rose-400 border-rose-500/20",
+    tagClass: "bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20",
     title: "Checkout 500 Error",
     prompt: "Website checkout payment gateway error fix karna hai, high priority",
   },
   {
     icon: "📊",
     tag: "Reporting",
-    tagClass: "bg-indigo-500/10 text-indigo-400 border-indigo-500/20",
+    tagClass: "bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/20",
     title: "Weekly Analytics",
     prompt: "Weekly client analytics report compile karo aur Friday 3 PM tak share karo",
   },
@@ -452,7 +452,7 @@ export default function TasksPage() {
       value: "CLIENT",
       icon: "🏢",
       badge: "SHARED",
-      badgeClass: "bg-indigo-500/10 text-indigo-400 border border-indigo-500/30",
+      badgeClass: "bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/30",
       description: "Visible to active workspace team members",
     },
     {
@@ -460,7 +460,7 @@ export default function TasksPage() {
       value: "PERSONAL",
       icon: "🔒",
       badge: "PRIVATE",
-      badgeClass: "bg-purple-500/10 text-purple-400 border border-purple-500/30",
+      badgeClass: "bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/30",
       description: "Only visible to you, strictly hidden from others",
     },
   ];
@@ -489,10 +489,10 @@ export default function TasksPage() {
 
   const priorityOptions: DropdownOption[] = [
     { label: "All Priorities", value: "ALL" },
-    { label: "Urgent", value: "URGENT", icon: "🔴", badge: "CRITICAL", badgeClass: "bg-rose-500/10 text-rose-400 border border-rose-500/30" },
-    { label: "High", value: "HIGH", icon: "🟠", badge: "HIGH", badgeClass: "bg-orange-500/10 text-orange-400 border border-orange-500/30" },
-    { label: "Medium", value: "MEDIUM", icon: "🟡", badge: "MED", badgeClass: "bg-amber-500/10 text-amber-400 border border-amber-500/30" },
-    { label: "Low", value: "LOW", icon: "🟢", badge: "LOW", badgeClass: "bg-emerald-500/10 text-emerald-400 border border-emerald-500/30" },
+    { label: "Urgent", value: "URGENT", icon: "🔴", badge: "CRITICAL", badgeClass: "bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/30" },
+    { label: "High", value: "HIGH", icon: "🟠", badge: "HIGH", badgeClass: "bg-orange-500/10 text-orange-600 dark:text-orange-400 border border-orange-500/30" },
+    { label: "Medium", value: "MEDIUM", icon: "🟡", badge: "MED", badgeClass: "bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30" },
+    { label: "Low", value: "LOW", icon: "🟢", badge: "LOW", badgeClass: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30" },
   ];
 
   const categoryOptions: DropdownOption[] = [
@@ -502,9 +502,9 @@ export default function TasksPage() {
 
   // Dropdown Options for Task Card Status Changer
   const cardStatusOptions: DropdownOption[] = [
-    { label: "To Do", value: "TODO", icon: "⚪", badgeClass: "bg-zinc-800 text-zinc-300 border border-zinc-700" },
-    { label: "In Progress", value: "IN_PROGRESS", icon: "🔵", badgeClass: "bg-sky-500/10 text-sky-400 border border-sky-500/30" },
-    { label: "Completed", value: "DONE", icon: "🟢", badgeClass: "bg-emerald-500/10 text-emerald-400 border border-emerald-500/30" },
+    { label: "To Do", value: "TODO", icon: "⚪", badgeClass: "bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700" },
+    { label: "In Progress", value: "IN_PROGRESS", icon: "🔵", badgeClass: "bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/30" },
+    { label: "Completed", value: "DONE", icon: "🟢", badgeClass: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30" },
   ];
 
   const hasActiveFilters =
@@ -577,21 +577,21 @@ export default function TasksPage() {
     return (
       <div
         key={task.id}
-        className={`group rounded-2xl bg-zinc-900/80 border border-zinc-800/90 hover:border-zinc-700 p-5 flex flex-col justify-between transition-all duration-200 shadow-md hover:shadow-xl space-y-4 border-t-2 ${priorityBorderColor}`}
+        className={`group rounded-2xl bg-white dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-800/90 hover:border-zinc-300 dark:hover:border-zinc-700 p-5 flex flex-col justify-between transition-all duration-200 shadow-xs hover:shadow-md space-y-4 border-t-2 ${priorityBorderColor}`}
       >
         <div className="space-y-3">
           {/* Card Header Badges */}
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2 flex-wrap">
               {task.scope === "PERSONAL" || task.is_private ? (
-                <span className="text-[11px] px-2.5 py-0.5 rounded-lg font-semibold bg-purple-500/10 text-purple-400 border border-purple-500/20 flex items-center gap-1">
+                <span className="text-[11px] px-2.5 py-0.5 rounded-lg font-semibold bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20 flex items-center gap-1">
                   <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                   </svg>
                   PERSONAL
                 </span>
               ) : (
-                <span className="text-[11px] px-2.5 py-0.5 rounded-lg font-semibold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 flex items-center gap-1">
+                <span className="text-[11px] px-2.5 py-0.5 rounded-lg font-semibold bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 flex items-center gap-1">
                   <span>🏢</span>
                   CLIENT
                 </span>
@@ -611,22 +611,22 @@ export default function TasksPage() {
 
           {/* Title & Description */}
           <div>
-            <h3 className="text-base font-semibold text-white leading-snug group-hover:text-indigo-300 transition-colors">
+            <h3 className="text-base font-semibold text-zinc-900 dark:text-white leading-snug group-hover:text-indigo-600 dark:group-hover:text-indigo-300 transition-colors">
               {task.title}
             </h3>
             {task.description && (
-              <p className="text-xs text-zinc-400 mt-1 line-clamp-2 leading-relaxed">
+              <p className="text-xs text-zinc-600 dark:text-zinc-400 mt-1 line-clamp-2 leading-relaxed">
                 {task.description}
               </p>
             )}
           </div>
 
           {/* Due Date & Assignees */}
-          <div className="flex items-center justify-between text-xs pt-1 text-zinc-400">
+          <div className="flex items-center justify-between text-xs pt-1 text-zinc-500 dark:text-zinc-400">
             {dueDateDisplay ? (
               <div
                 className={`flex items-center gap-1.5 ${
-                  dueDateDisplay.isOverdue ? "text-rose-400 font-semibold" : "text-zinc-400"
+                  dueDateDisplay.isOverdue ? "text-rose-600 dark:text-rose-400 font-semibold" : "text-zinc-500 dark:text-zinc-400"
                 }`}
               >
                 <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -636,7 +636,7 @@ export default function TasksPage() {
                 {dueDateDisplay.isOverdue && <span className="text-[10px] uppercase tracking-wider">(Overdue)</span>}
               </div>
             ) : (
-              <span className="text-zinc-600">No deadline</span>
+              <span className="text-zinc-400 dark:text-zinc-600">No deadline</span>
             )}
 
             {/* Assignee initials */}
@@ -648,7 +648,7 @@ export default function TasksPage() {
                   <div
                     key={id}
                     title={m ? `${m.name} (${m.role})` : id}
-                    className="w-6 h-6 rounded-full bg-gradient-to-tr from-indigo-600 to-purple-600 text-[10px] font-bold text-white flex items-center justify-center border-2 border-zinc-900 shadow-sm"
+                    className="w-6 h-6 rounded-full bg-gradient-to-tr from-indigo-600 to-purple-600 text-[10px] font-bold text-white flex items-center justify-center border-2 border-white dark:border-zinc-900 shadow-sm"
                   >
                     {initial}
                   </div>
@@ -659,25 +659,25 @@ export default function TasksPage() {
 
           {/* Step Decomposition Checklist (Collapsible) */}
           {totalSteps > 0 && (
-            <div className="pt-2 border-t border-zinc-800/80 space-y-2">
+            <div className="pt-2 border-t border-zinc-200 dark:border-zinc-800/80 space-y-2">
               <button
                 onClick={() =>
                   setExpandedTasks((prev) => ({ ...prev, [task.id]: !isExpanded }))
                 }
-                className="w-full flex items-center justify-between text-xs text-zinc-400 hover:text-zinc-200 cursor-pointer"
+                className="w-full flex items-center justify-between text-xs text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200 cursor-pointer"
               >
                 <div className="flex items-center gap-2">
                   <span className="font-medium">
                     Subtasks ({completedSteps}/{totalSteps})
                   </span>
-                  <div className="w-16 h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+                  <div className="w-16 h-1.5 bg-zinc-100 dark:bg-zinc-800 rounded-full overflow-hidden">
                     <div
                       className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full transition-all duration-300"
                       style={{ width: `${progressPercent}%` }}
                     />
                   </div>
                 </div>
-                <span className="text-[11px] text-zinc-500">
+                <span className="text-[11px] text-zinc-400 dark:text-zinc-500">
                   {isExpanded ? "Hide ▲" : "Show ▼"}
                 </span>
               </button>
@@ -687,17 +687,17 @@ export default function TasksPage() {
                   {task.sub_tasks.map((st, idx) => (
                     <label
                       key={idx}
-                      className="flex items-start gap-2 text-xs text-zinc-300 hover:text-white cursor-pointer group/st p-1.5 rounded-lg hover:bg-zinc-800/50 transition-colors"
+                      className="flex items-start gap-2 text-xs text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white cursor-pointer group/st p-1.5 rounded-lg hover:bg-zinc-100/70 dark:hover:bg-zinc-800/50 transition-colors"
                     >
                       <input
                         type="checkbox"
                         checked={st.completed}
                         onChange={() => handleToggleSubtask(task.id, idx)}
-                        className="mt-0.5 rounded bg-zinc-800 border-zinc-700 text-indigo-600 focus:ring-indigo-500 focus:ring-offset-zinc-900 cursor-pointer"
+                        className="mt-0.5 rounded bg-white dark:bg-zinc-800 border-zinc-300 dark:border-zinc-700 text-indigo-600 focus:ring-indigo-500 focus:ring-offset-white dark:focus:ring-offset-zinc-900 cursor-pointer"
                       />
                       <span
                         className={`flex-1 transition-all ${
-                          st.completed ? "line-through text-zinc-500" : ""
+                          st.completed ? "line-through text-zinc-400 dark:text-zinc-500" : ""
                         }`}
                       >
                         {st.title}
@@ -711,7 +711,7 @@ export default function TasksPage() {
         </div>
 
         {/* Card Footer: Status & Actions */}
-        <div className="flex items-center justify-between pt-3 border-t border-zinc-800/80">
+        <div className="flex items-center justify-between pt-3 border-t border-zinc-200 dark:border-zinc-800/80">
           {/* Site-Themed Dropdown for Status */}
           <DropdownSelect
             value={task.status}
@@ -724,10 +724,10 @@ export default function TasksPage() {
             minWidth="130px"
             buttonClassName={`!text-[11px] !font-semibold !px-2.5 !h-7.5 !rounded-lg border ${
               task.status === "DONE"
-                ? "!bg-emerald-950/40 !text-emerald-400 !border-emerald-500/30"
+                ? "!bg-emerald-50 dark:!bg-emerald-950/40 !text-emerald-700 dark:!text-emerald-400 !border-emerald-200 dark:!border-emerald-500/30"
                 : task.status === "IN_PROGRESS"
-                ? "!bg-sky-950/40 !text-sky-400 !border-sky-500/30"
-                : "!bg-zinc-900 !text-zinc-300 !border-zinc-700/80"
+                ? "!bg-sky-50 dark:!bg-sky-950/40 !text-sky-700 dark:!text-sky-400 !border-sky-200 dark:!border-sky-500/30"
+                : "!bg-zinc-100 dark:!bg-zinc-900 !text-zinc-700 dark:!text-zinc-300 !border-zinc-200 dark:!border-zinc-700/80"
             }`}
           />
 
@@ -735,7 +735,7 @@ export default function TasksPage() {
             <button
               onClick={() => openEditTaskModal(task)}
               title="Edit Task"
-              className="p-1.5 rounded-lg hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200 transition-colors cursor-pointer"
+              className="p-1.5 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors cursor-pointer"
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -744,7 +744,7 @@ export default function TasksPage() {
             <button
               onClick={() => handleDeleteTask(task.id)}
               title="Delete Task"
-              className="p-1.5 rounded-lg hover:bg-rose-950/40 text-zinc-500 hover:text-rose-400 transition-colors cursor-pointer"
+              className="p-1.5 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/40 text-zinc-400 dark:text-zinc-500 hover:text-rose-600 dark:hover:text-rose-400 transition-colors cursor-pointer"
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -757,22 +757,22 @@ export default function TasksPage() {
   };
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-100 p-4 sm:p-6 lg:p-8 space-y-6">
+    <div className="min-h-screen bg-slate-50 dark:bg-[#09090b] text-zinc-900 dark:text-zinc-100 p-4 sm:p-6 lg:p-8 space-y-6">
       {/* Toast Notification */}
       {toast && (
         <div
           className={`fixed bottom-6 right-6 z-50 px-4 py-3 rounded-2xl shadow-2xl border text-sm flex items-center gap-3 animate-in fade-in slide-in-from-bottom-5 duration-200 ${
             toast.type === "error"
-              ? "bg-rose-950/90 border-rose-800 text-rose-200"
-              : "bg-emerald-950/90 border-emerald-800 text-emerald-200"
+              ? "bg-rose-50 dark:bg-rose-950/90 border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-200"
+              : "bg-emerald-50 dark:bg-emerald-950/90 border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200"
           }`}
         >
           {toast.type === "error" ? (
-            <svg className="w-5 h-5 text-rose-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg className="w-5 h-5 text-rose-500 dark:text-rose-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
           ) : (
-            <svg className="w-5 h-5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg className="w-5 h-5 text-emerald-500 dark:text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
             </svg>
           )}
@@ -781,22 +781,22 @@ export default function TasksPage() {
       )}
 
       {/* Header Section */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-800/80 pb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-200 dark:border-zinc-800/80 pb-6">
         <div>
           <div className="flex items-center gap-3">
             <div className="p-2.5 rounded-2xl bg-gradient-to-br from-indigo-500/20 via-purple-500/20 to-pink-500/20 border border-indigo-500/30 shadow-sm">
-              <svg className="w-6 h-6 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <svg className="w-6 h-6 text-indigo-500 dark:text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </div>
             <div>
-              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white flex items-center gap-2.5">
+              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-zinc-900 dark:text-white flex items-center gap-2.5">
                 Task Management
-                <span className="text-xs px-2.5 py-0.5 rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/30 font-semibold tracking-wide">
+                <span className="text-xs px-2.5 py-0.5 rounded-full bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/30 font-semibold tracking-wide">
                   AI-Powered
                 </span>
               </h1>
-              <p className="text-sm text-zinc-400 mt-0.5">
+              <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-0.5">
                 Natural language task creation with step decomposition & strict multi-tenant isolation
               </p>
             </div>
@@ -817,9 +817,9 @@ export default function TasksPage() {
 
           <button
             onClick={() => openNewTaskModal(false)}
-            className="px-4 py-2.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-zinc-200 border border-zinc-700/80 hover:border-zinc-600 text-sm font-semibold transition-colors flex items-center gap-2 cursor-pointer active:scale-97 shadow-xs"
+            className="px-4 py-2.5 rounded-xl bg-white dark:bg-zinc-900 hover:bg-zinc-50 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700/80 hover:border-zinc-300 dark:hover:border-zinc-600 text-sm font-semibold transition-colors flex items-center gap-2 cursor-pointer active:scale-97 shadow-xs"
           >
-            <svg className="w-4 h-4 text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg className="w-4 h-4 text-zinc-500 dark:text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
             </svg>
             <span>New Task</span>
@@ -829,50 +829,50 @@ export default function TasksPage() {
 
       {/* Metrics Row */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <div className="p-4.5 rounded-2xl bg-zinc-900/60 border border-zinc-800/80 backdrop-blur-sm shadow-sm hover:border-zinc-700/80 transition-colors">
-          <div className="text-xs font-medium text-zinc-400 uppercase tracking-wider flex items-center justify-between">
+        <div className="p-4.5 rounded-2xl bg-white dark:bg-zinc-900/60 border border-zinc-200/90 dark:border-zinc-800/80 shadow-xs hover:border-zinc-300 dark:hover:border-zinc-700/80 transition-colors">
+          <div className="text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider flex items-center justify-between">
             <span>Total Tasks</span>
-            <span className="text-zinc-600 text-sm">📋</span>
+            <span className="text-zinc-400 dark:text-zinc-600 text-sm">📋</span>
           </div>
-          <div className="text-2xl font-bold text-white mt-1.5">{metrics.total}</div>
+          <div className="text-2xl font-bold text-zinc-900 dark:text-white mt-1.5">{metrics.total}</div>
         </div>
 
-        <div className="p-4.5 rounded-2xl bg-zinc-900/60 border border-zinc-800/80 backdrop-blur-sm shadow-sm hover:border-sky-500/30 transition-colors">
-          <div className="text-xs font-medium text-sky-400 uppercase tracking-wider flex items-center justify-between">
+        <div className="p-4.5 rounded-2xl bg-white dark:bg-zinc-900/60 border border-zinc-200/90 dark:border-zinc-800/80 shadow-xs hover:border-sky-500/30 transition-colors">
+          <div className="text-xs font-medium text-sky-600 dark:text-sky-400 uppercase tracking-wider flex items-center justify-between">
             <span>In Progress</span>
-            <span className="w-2 h-2 rounded-full bg-sky-400 animate-ping" />
+            <span className="w-2 h-2 rounded-full bg-sky-500 animate-ping" />
           </div>
-          <div className="text-2xl font-bold text-sky-300 mt-1.5">{metrics.inProgress}</div>
+          <div className="text-2xl font-bold text-sky-600 dark:text-sky-300 mt-1.5">{metrics.inProgress}</div>
         </div>
 
-        <div className="p-4.5 rounded-2xl bg-zinc-900/60 border border-zinc-800/80 backdrop-blur-sm shadow-sm hover:border-emerald-500/30 transition-colors">
-          <div className="text-xs font-medium text-emerald-400 uppercase tracking-wider flex items-center justify-between">
+        <div className="p-4.5 rounded-2xl bg-white dark:bg-zinc-900/60 border border-zinc-200/90 dark:border-zinc-800/80 shadow-xs hover:border-emerald-500/30 transition-colors">
+          <div className="text-xs font-medium text-emerald-600 dark:text-emerald-400 uppercase tracking-wider flex items-center justify-between">
             <span>Completed</span>
-            <span className="text-emerald-400 text-sm">✓</span>
+            <span className="text-emerald-600 dark:text-emerald-400 text-sm">✓</span>
           </div>
-          <div className="text-2xl font-bold text-emerald-300 mt-1.5">{metrics.done}</div>
+          <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-300 mt-1.5">{metrics.done}</div>
         </div>
 
-        <div className="p-4.5 rounded-2xl bg-zinc-900/60 border border-zinc-800/80 backdrop-blur-sm shadow-sm hover:border-purple-500/30 transition-colors">
-          <div className="text-xs font-medium text-purple-400 uppercase tracking-wider flex items-center justify-between">
+        <div className="p-4.5 rounded-2xl bg-white dark:bg-zinc-900/60 border border-zinc-200/90 dark:border-zinc-800/80 shadow-xs hover:border-purple-500/30 transition-colors">
+          <div className="text-xs font-medium text-purple-600 dark:text-purple-400 uppercase tracking-wider flex items-center justify-between">
             <span>Personal (Private)</span>
-            <span className="text-purple-400 text-sm">🔒</span>
+            <span className="text-purple-600 dark:text-purple-400 text-sm">🔒</span>
           </div>
-          <div className="text-2xl font-bold text-purple-300 mt-1.5">{metrics.personal}</div>
+          <div className="text-2xl font-bold text-purple-600 dark:text-purple-300 mt-1.5">{metrics.personal}</div>
         </div>
       </div>
 
       {/* Consolidated Toolbar: Scope Tabs + Search + Dropdown Filters + View Toggle */}
-      <div className="bg-zinc-900/70 border border-zinc-800/80 rounded-2xl p-3 shadow-sm backdrop-blur-sm">
+      <div className="bg-white dark:bg-zinc-900/70 border border-zinc-200/90 dark:border-zinc-800/80 rounded-2xl p-3 shadow-xs">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
           {/* Segmented Control Tabs */}
-          <div className="flex items-center gap-1 p-1 bg-zinc-950/80 rounded-xl border border-zinc-800/80 shrink-0 overflow-x-auto">
+          <div className="flex items-center gap-1 p-1 bg-zinc-100 dark:bg-zinc-950/80 rounded-xl border border-zinc-200 dark:border-zinc-800/80 shrink-0 overflow-x-auto">
             <button
               onClick={() => setActiveTab("ALL")}
               className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
                 activeTab === "ALL"
-                  ? "bg-zinc-800 text-white shadow-xs"
-                  : "text-zinc-400 hover:text-zinc-200"
+                  ? "bg-white text-zinc-900 shadow-xs dark:bg-zinc-800 dark:text-white"
+                  : "text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-200"
               }`}
             >
               All Tasks ({tasks.length})
@@ -882,7 +882,7 @@ export default function TasksPage() {
               className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
                 activeTab === "CLIENT"
                   ? "bg-indigo-600 text-white shadow-xs"
-                  : "text-zinc-400 hover:text-zinc-200"
+                  : "text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-200"
               }`}
             >
               Client Deliverables ({tasks.filter((t) => t.scope === "CLIENT").length})
@@ -892,7 +892,7 @@ export default function TasksPage() {
               className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
                 activeTab === "PERSONAL"
                   ? "bg-purple-600 text-white shadow-xs"
-                  : "text-zinc-400 hover:text-zinc-200"
+                  : "text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-200"
               }`}
             >
               <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -906,7 +906,7 @@ export default function TasksPage() {
           <div className="flex items-center gap-2.5 flex-wrap lg:flex-nowrap flex-1 lg:justify-end">
             {/* Search Input */}
             <div className="relative flex-1 sm:max-w-xs min-w-[180px]">
-              <svg className="w-4 h-4 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className="w-4 h-4 text-zinc-400 dark:text-zinc-500 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
               <input
@@ -914,12 +914,12 @@ export default function TasksPage() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search tasks, subtasks..."
-                className="w-full pl-9 pr-7 py-1.5 rounded-xl bg-zinc-950 border border-zinc-800 text-xs text-zinc-100 placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 h-9"
+                className="w-full pl-9 pr-7 py-1.5 rounded-xl bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 text-xs text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 h-9 shadow-xs"
               />
               {searchQuery && (
                 <button
                   onClick={() => setSearchQuery("")}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300 text-xs cursor-pointer"
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 dark:text-zinc-500 dark:hover:text-zinc-300 text-xs cursor-pointer"
                 >
                   ✕
                 </button>
@@ -935,7 +935,7 @@ export default function TasksPage() {
               size="md"
               minWidth="140px"
               accentColor="indigo"
-              buttonClassName="!bg-zinc-950 !border-zinc-800 hover:!border-zinc-700 !text-zinc-200 text-xs font-medium"
+              buttonClassName="text-xs font-medium"
             />
 
             {/* Priority Dropdown (Site-Themed) */}
@@ -947,7 +947,7 @@ export default function TasksPage() {
               size="md"
               minWidth="145px"
               accentColor="indigo"
-              buttonClassName="!bg-zinc-950 !border-zinc-800 hover:!border-zinc-700 !text-zinc-200 text-xs font-medium"
+              buttonClassName="text-xs font-medium"
             />
 
             {/* Category Dropdown (Site-Themed) */}
@@ -959,19 +959,19 @@ export default function TasksPage() {
               size="md"
               minWidth="160px"
               accentColor="indigo"
-              buttonClassName="!bg-zinc-950 !border-zinc-800 hover:!border-zinc-700 !text-zinc-200 text-xs font-medium"
+              buttonClassName="text-xs font-medium"
             />
 
             {/* View Switcher: Grid vs Kanban */}
-            <div className="flex items-center p-0.5 bg-zinc-950 rounded-xl border border-zinc-800/80 shrink-0">
+            <div className="flex items-center p-0.5 bg-zinc-100 dark:bg-zinc-950 rounded-xl border border-zinc-200 dark:border-zinc-800/80 shrink-0">
               <button
                 type="button"
                 onClick={() => setViewMode("grid")}
                 title="Grid Cards View"
                 className={`p-1.5 rounded-lg transition-all cursor-pointer ${
                   viewMode === "grid"
-                    ? "bg-zinc-800 text-white shadow-xs"
-                    : "text-zinc-500 hover:text-zinc-300"
+                    ? "bg-white text-zinc-900 shadow-xs dark:bg-zinc-800 dark:text-white"
+                    : "text-zinc-500 hover:text-zinc-800 dark:text-zinc-500 dark:hover:text-zinc-300"
                 }`}
               >
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -984,8 +984,8 @@ export default function TasksPage() {
                 title="Kanban Board View"
                 className={`p-1.5 rounded-lg transition-all cursor-pointer ${
                   viewMode === "kanban"
-                    ? "bg-zinc-800 text-white shadow-xs"
-                    : "text-zinc-500 hover:text-zinc-300"
+                    ? "bg-white text-zinc-900 shadow-xs dark:bg-zinc-800 dark:text-white"
+                    : "text-zinc-500 hover:text-zinc-800 dark:text-zinc-500 dark:hover:text-zinc-300"
                 }`}
               >
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -999,7 +999,7 @@ export default function TasksPage() {
               <button
                 onClick={resetFilters}
                 title="Reset all filters"
-                className="h-9 px-2.5 rounded-xl bg-zinc-800/80 hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200 text-xs font-medium border border-zinc-700/80 transition-colors flex items-center gap-1 cursor-pointer shrink-0"
+                className="h-9 px-2.5 rounded-xl bg-white hover:bg-zinc-50 dark:bg-zinc-800/80 dark:hover:bg-zinc-800 text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-200 text-xs font-medium border border-zinc-200 dark:border-zinc-700/80 transition-colors flex items-center gap-1 cursor-pointer shrink-0 shadow-xs"
               >
                 <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -1021,15 +1021,15 @@ export default function TasksPage() {
           <span className="text-sm font-medium">Loading workspace tasks...</span>
         </div>
       ) : filteredTasks.length === 0 ? (
-        <div className="text-center py-16 px-4 rounded-3xl bg-zinc-900/30 border border-zinc-800/80 space-y-4">
-          <div className="w-12 h-12 rounded-2xl bg-zinc-800/80 text-zinc-500 mx-auto flex items-center justify-center">
+        <div className="text-center py-16 px-4 rounded-3xl bg-white dark:bg-zinc-900/40 border border-zinc-200/90 dark:border-zinc-800/80 shadow-xs space-y-4">
+          <div className="w-12 h-12 rounded-2xl bg-zinc-100 dark:bg-zinc-800/80 text-zinc-400 dark:text-zinc-500 mx-auto flex items-center justify-center">
             <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
             </svg>
           </div>
           <div>
-            <h3 className="text-base font-semibold text-zinc-200">No tasks found</h3>
-            <p className="text-sm text-zinc-500 max-w-sm mx-auto mt-1">
+            <h3 className="text-base font-semibold text-zinc-900 dark:text-zinc-200">No tasks found</h3>
+            <p className="text-sm text-zinc-500 dark:text-zinc-400 max-w-sm mx-auto mt-1">
               {searchQuery || statusFilter !== "ALL" || categoryFilter !== "ALL" || priorityFilter !== "ALL"
                 ? "Try adjusting your filters or search query."
                 : "Create your first task or use AI natural language creation in seconds."}
@@ -1038,7 +1038,7 @@ export default function TasksPage() {
           <div className="flex items-center justify-center gap-3 pt-2">
             <button
               onClick={() => openNewTaskModal(true)}
-              className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold transition-colors flex items-center gap-1.5 cursor-pointer shadow-sm"
+              className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold transition-colors flex items-center gap-1.5 cursor-pointer shadow-sm active:scale-97"
             >
               <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
@@ -1047,7 +1047,7 @@ export default function TasksPage() {
             </button>
             <button
               onClick={() => openNewTaskModal(false)}
-              className="px-4 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs font-medium transition-colors cursor-pointer"
+              className="px-4 py-2 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-transparent text-xs font-medium transition-colors cursor-pointer active:scale-97 shadow-xs"
             >
               + Create Manually
             </button>
@@ -1058,12 +1058,12 @@ export default function TasksPage() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Column 1: To Do */}
           <div className="space-y-4">
-            <div className="flex items-center justify-between p-3 rounded-2xl bg-zinc-900/60 border border-zinc-800/80">
+            <div className="flex items-center justify-between p-3 rounded-2xl bg-white dark:bg-zinc-900/60 border border-zinc-200/90 dark:border-zinc-800/80 shadow-xs">
               <div className="flex items-center gap-2">
                 <span className="w-2.5 h-2.5 rounded-full bg-zinc-400" />
-                <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-300">To Do</h3>
+                <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-700 dark:text-zinc-300">To Do</h3>
               </div>
-              <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-zinc-800 text-zinc-400">
+              <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400">
                 {filteredTasks.filter((t) => t.status === "TODO").length}
               </span>
             </div>
@@ -1072,7 +1072,7 @@ export default function TasksPage() {
                 .filter((t) => t.status === "TODO")
                 .map((task) => renderTaskCard(task))}
               {filteredTasks.filter((t) => t.status === "TODO").length === 0 && (
-                <div className="text-center py-8 border border-dashed border-zinc-800/60 rounded-2xl text-xs text-zinc-600">
+                <div className="text-center py-8 border border-dashed border-zinc-300 dark:border-zinc-800/60 rounded-2xl text-xs text-zinc-400 dark:text-zinc-600">
                   No tasks to do
                 </div>
               )}
@@ -1081,12 +1081,12 @@ export default function TasksPage() {
 
           {/* Column 2: In Progress */}
           <div className="space-y-4">
-            <div className="flex items-center justify-between p-3 rounded-2xl bg-zinc-900/60 border border-sky-900/30">
+            <div className="flex items-center justify-between p-3 rounded-2xl bg-white dark:bg-zinc-900/60 border border-sky-200 dark:border-sky-900/30 shadow-xs">
               <div className="flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-sky-400 animate-pulse" />
-                <h3 className="text-xs font-bold uppercase tracking-wider text-sky-400">In Progress</h3>
+                <span className="w-2.5 h-2.5 rounded-full bg-sky-500 animate-pulse" />
+                <h3 className="text-xs font-bold uppercase tracking-wider text-sky-700 dark:text-sky-400">In Progress</h3>
               </div>
-              <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-sky-950/60 text-sky-400 border border-sky-800/40">
+              <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-sky-50 dark:bg-sky-950/60 text-sky-700 dark:text-sky-400 border border-sky-200 dark:border-sky-800/40">
                 {filteredTasks.filter((t) => t.status === "IN_PROGRESS").length}
               </span>
             </div>
@@ -1095,7 +1095,7 @@ export default function TasksPage() {
                 .filter((t) => t.status === "IN_PROGRESS")
                 .map((task) => renderTaskCard(task))}
               {filteredTasks.filter((t) => t.status === "IN_PROGRESS").length === 0 && (
-                <div className="text-center py-8 border border-dashed border-zinc-800/60 rounded-2xl text-xs text-zinc-600">
+                <div className="text-center py-8 border border-dashed border-zinc-300 dark:border-zinc-800/60 rounded-2xl text-xs text-zinc-400 dark:text-zinc-600">
                   No tasks in progress
                 </div>
               )}
@@ -1104,12 +1104,12 @@ export default function TasksPage() {
 
           {/* Column 3: Completed */}
           <div className="space-y-4">
-            <div className="flex items-center justify-between p-3 rounded-2xl bg-zinc-900/60 border border-emerald-900/30">
+            <div className="flex items-center justify-between p-3 rounded-2xl bg-white dark:bg-zinc-900/60 border border-emerald-200 dark:border-emerald-900/30 shadow-xs">
               <div className="flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-emerald-400" />
-                <h3 className="text-xs font-bold uppercase tracking-wider text-emerald-400">Completed</h3>
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
+                <h3 className="text-xs font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400">Completed</h3>
               </div>
-              <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-emerald-950/60 text-emerald-400 border border-emerald-800/40">
+              <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/40">
                 {filteredTasks.filter((t) => t.status === "DONE").length}
               </span>
             </div>
@@ -1118,7 +1118,7 @@ export default function TasksPage() {
                 .filter((t) => t.status === "DONE")
                 .map((task) => renderTaskCard(task))}
               {filteredTasks.filter((t) => t.status === "DONE").length === 0 && (
-                <div className="text-center py-8 border border-dashed border-zinc-800/60 rounded-2xl text-xs text-zinc-600">
+                <div className="text-center py-8 border border-dashed border-zinc-300 dark:border-zinc-800/60 rounded-2xl text-xs text-zinc-400 dark:text-zinc-600">
                   No completed tasks yet
                 </div>
               )}
@@ -1134,26 +1134,26 @@ export default function TasksPage() {
 
       {/* Unified Side-by-Side Task Creator & AI Copilot Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-5 lg:p-6 overflow-y-auto">
-          <div className="relative w-full max-w-5xl xl:max-w-6xl bg-zinc-950/95 border border-zinc-800/90 rounded-3xl shadow-2xl shadow-indigo-950/40 overflow-hidden my-auto max-h-[92vh] flex flex-col animate-in fade-in zoom-in-95 duration-200">
+        <div className="fixed inset-0 z-50 bg-black/60 dark:bg-black/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-5 lg:p-6 overflow-y-auto">
+          <div className="relative w-full max-w-5xl xl:max-w-6xl bg-white dark:bg-zinc-950/95 border border-zinc-200 dark:border-zinc-800/90 rounded-3xl shadow-2xl shadow-indigo-950/20 dark:shadow-indigo-950/40 overflow-hidden my-auto max-h-[92vh] flex flex-col animate-in fade-in zoom-in-95 duration-200">
             {/* Modal Top Header */}
-            <div className="flex items-center justify-between px-6 py-4.5 border-b border-zinc-800/80 bg-zinc-950 shrink-0">
+            <div className="flex items-center justify-between px-6 py-4.5 border-b border-zinc-200 dark:border-zinc-800/80 bg-zinc-50/80 dark:bg-zinc-950 shrink-0">
               <div className="flex items-center gap-3.5">
                 <div className="p-2.5 rounded-2xl bg-gradient-to-br from-indigo-500/20 via-purple-500/20 to-pink-500/20 border border-indigo-500/30 shadow-sm">
-                  <svg className="w-5 h-5 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <svg className="w-5 h-5 text-indigo-500 dark:text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                   </svg>
                 </div>
                 <div>
-                  <h2 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
+                  <h2 className="text-lg sm:text-xl font-bold text-zinc-900 dark:text-white flex items-center gap-2">
                     {editingTaskId ? "Edit Task" : "Task Creator & AI Copilot"}
                     {!editingTaskId && (
-                      <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/30 font-semibold tracking-wide uppercase">
+                      <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/30 font-semibold tracking-wide uppercase">
                         AI-POWERED
                       </span>
                     )}
                   </h2>
-                  <p className="text-xs text-zinc-400 mt-0.5">
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
                     {editingTaskId
                       ? "Update attributes or modify subtask checklist"
                       : "Describe your task naturally on the left or customize directly on the right"}
@@ -1163,34 +1163,34 @@ export default function TasksPage() {
               <button
                 type="button"
                 onClick={() => setIsModalOpen(false)}
-                className="text-zinc-400 hover:text-zinc-200 p-2 rounded-xl hover:bg-zinc-800/80 transition-colors cursor-pointer"
+                className="text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 p-2 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-800/80 transition-colors cursor-pointer"
               >
                 ✕
               </button>
             </div>
 
             {/* Modal Body: Side-by-Side Layout */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 divide-y lg:divide-y-0 lg:divide-x divide-zinc-800/80 overflow-y-auto flex-1">
+            <div className="grid grid-cols-1 lg:grid-cols-12 divide-y lg:divide-y-0 lg:divide-x divide-zinc-200 dark:divide-zinc-800/80 overflow-y-auto flex-1">
               {/* Left Column: AI Assistant (42%) */}
-              <div className="lg:col-span-5 p-6 bg-zinc-950/60 flex flex-col justify-between space-y-5">
+              <div className="lg:col-span-5 p-6 bg-slate-50/80 dark:bg-zinc-950/80 flex flex-col justify-between space-y-5">
                 <div className="space-y-4">
                   <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2 text-indigo-300 font-semibold text-sm">
-                      <div className="p-1.5 rounded-xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+                    <div className="flex items-center gap-2 text-indigo-600 dark:text-indigo-300 font-semibold text-sm">
+                      <div className="p-1.5 rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
                         <svg className="w-4 h-4 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                         </svg>
                       </div>
-                      <span className="bg-gradient-to-r from-indigo-300 via-purple-300 to-pink-300 bg-clip-text text-transparent font-bold">
+                      <span className="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 dark:from-indigo-300 dark:via-purple-300 dark:to-pink-300 bg-clip-text text-transparent font-bold">
                         AI Task Copilot
                       </span>
                     </div>
-                    <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-purple-500/10 text-purple-300 border border-purple-500/20 font-medium">
+                    <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-purple-500/10 text-purple-600 dark:text-purple-300 border border-purple-500/20 font-medium">
                       🌐 EN / HI / Hinglish
                     </span>
                   </div>
 
-                  <p className="text-xs text-zinc-400 leading-relaxed">
+                  <p className="text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed">
                     Type your task naturally. Gemini will decompose it into chronological subtasks, resolve assignees, and set priorities on the right.
                   </p>
 
@@ -1206,14 +1206,14 @@ export default function TasksPage() {
                       }}
                       rows={4}
                       placeholder="e.g. Client X ke liye Instagram post design karna hai, Rohit ko assign karo, kal sham 5 PM tak complete chahiye..."
-                      className="w-full px-4 py-3 rounded-2xl bg-zinc-900/90 border border-indigo-500/30 text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500 transition-all text-xs sm:text-sm resize-none shadow-inner"
+                      className="w-full px-4 py-3 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-white placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 transition-all text-xs sm:text-sm resize-none shadow-xs"
                     />
 
                     <div className="flex items-center justify-between text-[11px] text-zinc-500 px-1">
                       <span className="flex items-center gap-1">
-                        <kbd className="px-1.5 py-0.5 bg-zinc-800 rounded border border-zinc-700 text-[10px]">Ctrl</kbd>
+                        <kbd className="px-1.5 py-0.5 bg-zinc-100 dark:bg-zinc-800 rounded border border-zinc-200 dark:border-zinc-700 text-[10px] text-zinc-600 dark:text-zinc-400">Ctrl</kbd>
                         <span>+</span>
-                        <kbd className="px-1.5 py-0.5 bg-zinc-800 rounded border border-zinc-700 text-[10px]">Enter</kbd>
+                        <kbd className="px-1.5 py-0.5 bg-zinc-100 dark:bg-zinc-800 rounded border border-zinc-200 dark:border-zinc-700 text-[10px] text-zinc-600 dark:text-zinc-400">Enter</kbd>
                         <span>to decompose</span>
                       </span>
                       <span>{aiPrompt.length} chars</span>
@@ -1245,14 +1245,14 @@ export default function TasksPage() {
                   </div>
 
                   {aiError && (
-                    <p className="text-xs text-rose-400 bg-rose-950/40 border border-rose-800/60 px-3 py-2 rounded-xl">
+                    <p className="text-xs text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800/60 px-3 py-2 rounded-xl">
                       {aiError}
                     </p>
                   )}
 
                   {/* Sleek Quick Prompts */}
-                  <div className="space-y-2 pt-2 border-t border-zinc-800/80">
-                    <span className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider">
+                  <div className="space-y-2 pt-2 border-t border-zinc-200 dark:border-zinc-800/80">
+                    <span className="text-[11px] font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
                       Quick Prompts
                     </span>
                     <div className="grid grid-cols-1 gap-2">
@@ -1264,21 +1264,21 @@ export default function TasksPage() {
                             setAiPrompt(item.prompt);
                             handleAiParse(item.prompt);
                           }}
-                          className="text-left p-2.5 rounded-xl bg-zinc-900/80 hover:bg-zinc-850 text-zinc-300 hover:text-white border border-zinc-800/90 hover:border-indigo-500/40 transition-all cursor-pointer group flex items-start gap-2.5"
+                          className="text-left p-2.5 rounded-xl bg-white dark:bg-zinc-900/80 hover:bg-zinc-50 dark:hover:bg-zinc-850 text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white border border-zinc-200 dark:border-zinc-800/90 hover:border-indigo-400 dark:hover:border-indigo-500/40 transition-all cursor-pointer group flex items-start gap-2.5 shadow-xs"
                         >
                           <span className="text-base shrink-0 group-hover:scale-110 transition-transform">
                             {item.icon}
                           </span>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center justify-between gap-2 mb-0.5">
-                              <span className="text-xs font-semibold text-zinc-200 group-hover:text-indigo-300 transition-colors">
+                              <span className="text-xs font-semibold text-zinc-800 dark:text-zinc-200 group-hover:text-indigo-600 dark:group-hover:text-indigo-300 transition-colors">
                                 {item.title}
                               </span>
                               <span className={`text-[9px] px-1.5 py-0.2 rounded font-medium border shrink-0 ${item.tagClass}`}>
                                 {item.tag}
                               </span>
                             </div>
-                            <p className="text-[11px] text-zinc-400 line-clamp-1 group-hover:text-zinc-300">
+                            <p className="text-[11px] text-zinc-500 dark:text-zinc-400 line-clamp-1 group-hover:text-zinc-700 dark:group-hover:text-zinc-300">
                               {item.prompt}
                             </p>
                           </div>
@@ -1289,28 +1289,28 @@ export default function TasksPage() {
                 </div>
 
                 {/* AI Feature Highlights */}
-                <div className="pt-4 border-t border-zinc-800/60 text-[11px] text-zinc-500 space-y-1.5">
+                <div className="pt-4 border-t border-zinc-200 dark:border-zinc-800/60 text-[11px] text-zinc-500 dark:text-zinc-400 space-y-1.5">
                   <div className="flex items-center gap-2">
-                    <span className="w-4 h-4 rounded-full bg-emerald-500/10 text-emerald-400 flex items-center justify-center text-[10px] font-bold">✓</span>
+                    <span className="w-4 h-4 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-[10px] font-bold">✓</span>
                     <span>Automatic step decomposition checklist</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="w-4 h-4 rounded-full bg-indigo-500/10 text-indigo-400 flex items-center justify-center text-[10px] font-bold">✓</span>
+                    <span className="w-4 h-4 rounded-full bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center text-[10px] font-bold">✓</span>
                     <span>Context-aware team member assignment</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="w-4 h-4 rounded-full bg-purple-500/10 text-purple-400 flex items-center justify-center text-[10px] font-bold">✓</span>
+                    <span className="w-4 h-4 rounded-full bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center text-[10px] font-bold">✓</span>
                     <span>Relative date & time resolution</span>
                   </div>
                 </div>
               </div>
 
               {/* Right Column: Task Form (58%) */}
-              <div className="lg:col-span-7 p-6 bg-zinc-900/40 flex flex-col justify-between space-y-5 overflow-y-auto">
+              <div className="lg:col-span-7 p-6 bg-white dark:bg-zinc-950 flex flex-col justify-between space-y-5 overflow-y-auto">
                 <form onSubmit={handleSaveTask} className="space-y-4.5">
                   {/* Task Title */}
                   <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-zinc-300 uppercase tracking-wider">
+                    <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider">
                       Task Title *
                     </label>
                     <input
@@ -1319,13 +1319,13 @@ export default function TasksPage() {
                       value={modalTitle}
                       onChange={(e) => setModalTitle(e.target.value)}
                       placeholder="e.g. Design Instagram Post for Client X"
-                      className="w-full h-10 px-3.5 rounded-xl bg-zinc-950 border border-zinc-800 text-sm text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500 transition-all"
+                      className="w-full h-10 px-3.5 rounded-xl bg-slate-50/80 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-sm text-zinc-900 dark:text-white placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 focus:bg-white dark:focus:bg-zinc-900 transition-all shadow-xs"
                     />
                   </div>
 
                   {/* Description */}
                   <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-zinc-300 uppercase tracking-wider">
+                    <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider">
                       Description / Context
                     </label>
                     <textarea
@@ -1333,14 +1333,14 @@ export default function TasksPage() {
                       value={modalDescription}
                       onChange={(e) => setModalDescription(e.target.value)}
                       placeholder="Brief summary or context..."
-                      className="w-full px-3.5 py-2.5 rounded-xl bg-zinc-950 border border-zinc-800 text-xs sm:text-sm text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500 resize-none transition-all"
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50/80 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-xs sm:text-sm text-zinc-900 dark:text-white placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 focus:bg-white dark:focus:bg-zinc-900 resize-none transition-all shadow-xs"
                     />
                   </div>
 
                   {/* Scope & Category (Site-Themed DropdownSelect) */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                     <div className="space-y-1.5">
-                      <label className="text-xs font-semibold text-zinc-300 uppercase tracking-wider flex items-center justify-between">
+                      <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider flex items-center justify-between">
                         <span>Scope</span>
                         <span className="text-[10px] text-zinc-500 font-normal lowercase">
                           (personal is private)
@@ -1354,12 +1354,12 @@ export default function TasksPage() {
                         align="left"
                         accentColor="indigo"
                         className="w-full"
-                        buttonClassName="!bg-zinc-950 !border-zinc-800 hover:!border-zinc-700 !text-white text-xs sm:text-sm font-medium"
+                        buttonClassName="text-xs sm:text-sm font-medium"
                       />
                     </div>
 
                     <div className="space-y-1.5">
-                      <label className="text-xs font-semibold text-zinc-300 uppercase tracking-wider">
+                      <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider">
                         Category
                       </label>
                       <DropdownSelect
@@ -1370,7 +1370,7 @@ export default function TasksPage() {
                         align="left"
                         accentColor="indigo"
                         className="w-full"
-                        buttonClassName="!bg-zinc-950 !border-zinc-800 hover:!border-zinc-700 !text-white text-xs sm:text-sm font-medium"
+                        buttonClassName="text-xs sm:text-sm font-medium"
                       />
                     </div>
                   </div>
@@ -1378,7 +1378,7 @@ export default function TasksPage() {
                   {/* Priority & Due Date (Site-Themed DropdownSelect) */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                     <div className="space-y-1.5">
-                      <label className="text-xs font-semibold text-zinc-300 uppercase tracking-wider">
+                      <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider">
                         Priority
                       </label>
                       <DropdownSelect
@@ -1389,13 +1389,13 @@ export default function TasksPage() {
                         align="left"
                         accentColor="indigo"
                         className="w-full"
-                        buttonClassName="!bg-zinc-950 !border-zinc-800 hover:!border-zinc-700 !text-white text-xs sm:text-sm font-medium"
+                        buttonClassName="text-xs sm:text-sm font-medium"
                       />
                     </div>
 
                     <div className="space-y-1.5">
                       <div className="flex items-center justify-between">
-                        <label className="text-xs font-semibold text-zinc-300 uppercase tracking-wider">
+                        <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider">
                           Due Date & Time
                         </label>
                         <div className="flex items-center gap-1.5 text-[10px]">
@@ -1408,11 +1408,11 @@ export default function TasksPage() {
                               const pad = (n: number) => String(n).padStart(2, "0");
                               setModalDueDate(`${tmrw.getFullYear()}-${pad(tmrw.getMonth() + 1)}-${pad(tmrw.getDate())}T17:00`);
                             }}
-                            className="text-indigo-400 hover:text-indigo-300 hover:underline cursor-pointer"
+                            className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-500 dark:hover:text-indigo-300 hover:underline cursor-pointer"
                           >
                             Tomorrow 5 PM
                           </button>
-                          <span className="text-zinc-600">•</span>
+                          <span className="text-zinc-400 dark:text-zinc-600">•</span>
                           <button
                             type="button"
                             onClick={() => {
@@ -1421,7 +1421,7 @@ export default function TasksPage() {
                               const pad = (n: number) => String(n).padStart(2, "0");
                               setModalDueDate(`${in3.getFullYear()}-${pad(in3.getMonth() + 1)}-${pad(in3.getDate())}T18:00`);
                             }}
-                            className="text-indigo-400 hover:text-indigo-300 hover:underline cursor-pointer"
+                            className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-500 dark:hover:text-indigo-300 hover:underline cursor-pointer"
                           >
                             +3 Days
                           </button>
@@ -1431,7 +1431,7 @@ export default function TasksPage() {
                         type="datetime-local"
                         value={modalDueDate}
                         onChange={(e) => setModalDueDate(e.target.value)}
-                        className="w-full h-10 px-3.5 rounded-xl bg-zinc-950 border border-zinc-800 hover:border-zinc-700 text-xs sm:text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500 transition-all cursor-pointer [color-scheme:dark]"
+                        className="w-full h-10 px-3.5 rounded-xl bg-slate-50/80 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 text-xs sm:text-sm text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 focus:bg-white dark:focus:bg-zinc-900 transition-all cursor-pointer [color-scheme:light] dark:[color-scheme:dark]"
                       />
                     </div>
                   </div>
@@ -1439,13 +1439,13 @@ export default function TasksPage() {
                   {/* Assignees (Hidden if PERSONAL) */}
                   {modalScope === "CLIENT" && (
                     <div className="space-y-1.5">
-                      <label className="text-xs font-semibold text-zinc-300 uppercase tracking-wider flex items-center justify-between">
+                      <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider flex items-center justify-between">
                         <span>Assignee(s)</span>
                         <span className="text-[10px] text-zinc-500 font-normal">
                           {modalAssignees.length} selected
                         </span>
                       </label>
-                      <div className="flex flex-wrap gap-1.5 p-2.5 bg-zinc-950 rounded-xl border border-zinc-800 max-h-32 overflow-y-auto">
+                      <div className="flex flex-wrap gap-1.5 p-2.5 bg-slate-50/80 dark:bg-zinc-900/60 rounded-xl border border-zinc-200 dark:border-zinc-800 max-h-32 overflow-y-auto">
                         {members.map((m) => {
                           const isSelected = modalAssignees.includes(m.id);
                           return (
@@ -1461,16 +1461,16 @@ export default function TasksPage() {
                               }}
                               className={`text-xs px-2.5 py-1.5 rounded-lg border transition-all flex items-center gap-1.5 cursor-pointer ${
                                 isSelected
-                                  ? "bg-indigo-600/20 text-indigo-300 border-indigo-500 shadow-xs"
-                                  : "bg-zinc-900 text-zinc-400 border-zinc-800 hover:border-zinc-700 hover:text-zinc-200"
+                                  ? "bg-indigo-50 dark:bg-indigo-600/20 text-indigo-700 dark:text-indigo-300 border-indigo-300 dark:border-indigo-500 shadow-xs"
+                                  : "bg-white dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 hover:text-zinc-900 dark:hover:text-zinc-200 shadow-xs"
                               }`}
                             >
-                              <span className="w-4 h-4 rounded-full bg-zinc-800 text-[10px] flex items-center justify-center font-bold">
+                              <span className="w-4 h-4 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-[10px] flex items-center justify-center font-bold">
                                 {m.name.charAt(0).toUpperCase()}
                               </span>
                               <span>{m.name}</span>
                               <span className="text-[10px] text-zinc-500">({m.role})</span>
-                              {isSelected && <span className="text-indigo-400 font-bold">✓</span>}
+                              {isSelected && <span className="text-indigo-600 dark:text-indigo-400 font-bold">✓</span>}
                             </button>
                           );
                         })}
@@ -1479,11 +1479,11 @@ export default function TasksPage() {
                   )}
 
                   {/* Subtasks & Step Decomposition */}
-                  <div className="space-y-2 pt-2 border-t border-zinc-800/80">
+                  <div className="space-y-2 pt-2 border-t border-zinc-200 dark:border-zinc-800/80">
                     <div className="flex items-center justify-between">
-                      <label className="text-xs font-semibold text-zinc-300 uppercase tracking-wider flex items-center gap-1.5">
+                      <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider flex items-center gap-1.5">
                         <span>Subtasks & Steps ({modalSubTasks.length})</span>
-                        <span className="text-[10px] text-indigo-400 font-normal">
+                        <span className="text-[10px] text-indigo-600 dark:text-indigo-400 font-normal">
                           Chronological breakdown
                         </span>
                       </label>
@@ -1495,7 +1495,7 @@ export default function TasksPage() {
                             { step: prev.length + 1, title: "", completed: false },
                           ])
                         }
-                        className="text-xs text-indigo-400 hover:text-indigo-300 font-medium cursor-pointer flex items-center gap-1 hover:underline"
+                        className="text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-500 dark:hover:text-indigo-300 font-medium cursor-pointer flex items-center gap-1 hover:underline"
                       >
                         <span>+ Add Step</span>
                       </button>
@@ -1505,9 +1505,9 @@ export default function TasksPage() {
                       {modalSubTasks.map((st, idx) => (
                         <div
                           key={idx}
-                          className="flex items-center gap-2.5 p-2 rounded-xl bg-zinc-950/70 border border-zinc-800/80 hover:border-zinc-700/80 transition-all group"
+                          className="flex items-center gap-2.5 p-2 rounded-xl bg-slate-50/80 dark:bg-zinc-900/60 border border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 transition-all group"
                         >
-                          <span className="text-[11px] font-bold text-indigo-400 bg-indigo-500/10 border border-indigo-500/20 w-6 h-6 rounded-lg flex items-center justify-center shrink-0">
+                          <span className="text-[11px] font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-500/10 border border-indigo-500/20 w-6 h-6 rounded-lg flex items-center justify-center shrink-0">
                             {String(idx + 1).padStart(2, "0")}
                           </span>
                           <input
@@ -1522,7 +1522,7 @@ export default function TasksPage() {
                               );
                             }}
                             placeholder={`Step ${idx + 1} action...`}
-                            className="flex-1 bg-transparent text-xs sm:text-sm text-white placeholder-zinc-500 focus:outline-none"
+                            className="flex-1 bg-transparent text-xs sm:text-sm text-zinc-900 dark:text-white placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none"
                           />
                           <button
                             type="button"
@@ -1530,7 +1530,7 @@ export default function TasksPage() {
                               setModalSubTasks((prev) => prev.filter((_, i) => i !== idx))
                             }
                             title="Remove step"
-                            className="opacity-60 group-hover:opacity-100 text-zinc-500 hover:text-rose-400 p-1 rounded-lg hover:bg-rose-950/30 transition-all cursor-pointer shrink-0"
+                            className="opacity-60 group-hover:opacity-100 text-zinc-400 dark:text-zinc-500 hover:text-rose-600 dark:hover:text-rose-400 p-1 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-all cursor-pointer shrink-0"
                           >
                             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -1542,11 +1542,11 @@ export default function TasksPage() {
                   </div>
 
                   {/* Modal Footer Actions */}
-                  <div className="flex items-center justify-end gap-3 pt-3 border-t border-zinc-800/80">
+                  <div className="flex items-center justify-end gap-3 pt-3 border-t border-zinc-200 dark:border-zinc-800/80">
                     <button
                       type="button"
                       onClick={() => setIsModalOpen(false)}
-                      className="px-4 py-2.5 rounded-xl bg-zinc-800/80 hover:bg-zinc-800 text-zinc-300 text-xs sm:text-sm font-medium transition-colors cursor-pointer"
+                      className="px-4 py-2.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800/80 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-transparent text-xs sm:text-sm font-medium transition-colors cursor-pointer"
                     >
                       Cancel
                     </button>

@@ -696,7 +696,7 @@ export default function AdminPage() {
       {/* 4. REAL FEEDS & TEAM STATUS */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Card 1: Instagram Account & Media Feed */}
-        <div className="p-5 bg-white dark:bg-[#111114] border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-xs flex flex-col justify-between">
+        <div className="p-5 bg-white dark:bg-[#111114] border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-xs flex flex-col">
           <div>
             <div className="flex items-center justify-between">
               <h2 className="text-sm font-bold text-zinc-900 dark:text-white">Instagram Media Feed</h2>
@@ -709,11 +709,11 @@ export default function AdminPage() {
             </p>
           </div>
 
-          <div className="py-3 flex-1 flex flex-col justify-center">
+          <div className="pt-3 flex-1 flex flex-col justify-start">
             {instagramPosts.length > 0 ? (
               <div className="space-y-2">
-                {instagramPosts.map((post) => (
-                  <div key={post.id} className="p-2.5 rounded-xl bg-slate-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800/60 flex items-center justify-between gap-3">
+                {instagramPosts.slice(0, 5).map((post) => (
+                  <div key={post.id} className="p-2.5 rounded-xl bg-slate-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800/60 hover:border-zinc-300 dark:hover:border-zinc-700 transition flex items-center justify-between gap-3">
                     <div className="flex items-center gap-2.5 truncate">
                       <div className="w-8 h-8 rounded-lg bg-pink-500/10 text-pink-500 border border-pink-500/20 flex items-center justify-center shrink-0">
                         <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
@@ -736,7 +736,7 @@ export default function AdminPage() {
                 ))}
               </div>
             ) : (
-              <div className="text-center py-4">
+              <div className="text-center py-6">
                 <p className="text-xs text-zinc-400 mb-2">No scheduled or published posts</p>
                 <Link
                   href="/admin/instagram"
@@ -750,7 +750,7 @@ export default function AdminPage() {
         </div>
 
         {/* Card 2: Recent System Activity Feed */}
-        <div className="p-5 bg-white dark:bg-[#111114] border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-xs flex flex-col justify-between">
+        <div className="p-5 bg-white dark:bg-[#111114] border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-xs flex flex-col">
           <div>
             <div className="flex items-center justify-between">
               <h2 className="text-sm font-bold text-zinc-900 dark:text-white">Recent System Activity Feed</h2>
@@ -761,7 +761,7 @@ export default function AdminPage() {
             <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">Real-time audit trail across modules</p>
           </div>
 
-          <div className="py-3 flex-1 flex flex-col justify-center">
+          <div className="pt-3 flex-1 flex flex-col justify-start">
             {recentActivities.length > 0 ? (
               <div className="space-y-2">
                 {recentActivities.slice(0, 5).map((act) => {
@@ -797,7 +797,7 @@ export default function AdminPage() {
                 })}
               </div>
             ) : (
-              <div className="text-center py-4">
+              <div className="text-center py-6">
                 <p className="text-xs text-zinc-400 mb-2">No activity logged yet</p>
                 <Link
                   href="/admin/activity-log"
@@ -824,7 +824,7 @@ export default function AdminPage() {
             </p>
           </div>
 
-          <div className="py-3 space-y-2.5">
+          <div className="pt-3 flex-1 flex flex-col space-y-2.5">
             <div className="relative">
               <input
                 type="text"
@@ -843,10 +843,10 @@ export default function AdminPage() {
               </svg>
             </div>
 
-            <div className="space-y-1.5 max-h-36 overflow-y-auto">
+            <div className="space-y-1.5 flex-1 overflow-y-auto max-h-[260px] pr-0.5">
               {filteredTeam.length > 0 ? (
-                filteredTeam.slice(0, 3).map((member) => (
-                  <div key={member.id} className="p-2 rounded-xl bg-slate-50 dark:bg-zinc-900/40 border border-zinc-100 dark:border-zinc-800/50 flex items-center justify-between">
+                filteredTeam.slice(0, 5).map((member) => (
+                  <div key={member.id} className="p-2 rounded-xl bg-slate-50 dark:bg-zinc-900/40 border border-zinc-100 dark:border-zinc-800/50 flex items-center justify-between hover:border-zinc-300 dark:hover:border-zinc-700 transition">
                     <div className="flex items-center gap-2 truncate">
                       <div className="w-6 h-6 rounded-full bg-blue-600 text-white font-bold text-[10px] flex items-center justify-center shrink-0">
                         {member.name.charAt(0).toUpperCase()}
@@ -866,7 +866,7 @@ export default function AdminPage() {
                   </div>
                 ))
               ) : (
-                <div className="text-center py-2">
+                <div className="text-center py-4">
                   <p className="text-xs text-zinc-400">No matching team members</p>
                 </div>
               )}

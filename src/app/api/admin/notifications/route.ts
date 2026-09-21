@@ -33,7 +33,7 @@ export async function GET() {
 
   try {
     const now = new Date();
-    const last7days = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const last3days = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000);
 
     const [
       promiseForms,
@@ -48,7 +48,7 @@ export async function GET() {
       // Promise Me enquiries (last 7 days) — filtered by workspace admin
       prisma.promiseMeEnquiry.findMany({
         where: {
-          createdAt: { gte: last7days },
+          createdAt: { gte: last3days },
         },
         orderBy: { createdAt: "desc" },
         take: 5,
@@ -64,7 +64,7 @@ export async function GET() {
       // Contact enquiries (last 7 days) — filtered by workspace admin
       prisma.contactEnquiry.findMany({
         where: {
-          createdAt: { gte: last7days },
+          createdAt: { gte: last3days },
         },
         orderBy: { createdAt: "desc" },
         take: 5,
@@ -80,7 +80,7 @@ export async function GET() {
       // Payments (last 7 days) — filtered by workspace admin
       prisma.payment.findMany({
         where: {
-          createdAt: { gte: last7days },
+          createdAt: { gte: last3days },
         },
         orderBy: { createdAt: "desc" },
         take: 5,
@@ -100,7 +100,7 @@ export async function GET() {
       // Instagram posts (last 7 days) — filtered by workspace
       prisma.instagramPostLog.findMany({
         where: {
-          createdAt: { gte: last7days },
+          createdAt: { gte: last3days },
           account: { userId: workspaceId },
         },
         orderBy: { createdAt: "desc" },
@@ -116,13 +116,19 @@ export async function GET() {
 
       // FormBridge submissions (last 7 days)
       prisma.formSubmission.findMany({
-        where: { createdAt: { gte: last7days } },
+        where: { createdAt: { gte: last3days } },
         orderBy: { createdAt: "desc" },
         take: 5,
         select: {
           id: true,
           projectId: true,
           createdAt: true,
+          project: {
+            select: {
+              name: true,
+              slug: true,
+            },
+          },
         },
       }).catch(() => []),
 
@@ -138,7 +144,7 @@ export async function GET() {
       // Appointments (last 7 days) — filtered by workspace
       prisma.appointment.findMany({
         where: {
-          createdAt: { gte: last7days },
+          createdAt: { gte: last3days },
           workspaceAdminId: workspaceId,
         },
         orderBy: { createdAt: "desc" },
@@ -156,7 +162,7 @@ export async function GET() {
       prisma.workspaceMembership.findMany({
         where: {
           workspaceId: workspaceId,
-          createdAt: { gte: last7days },
+          createdAt: { gte: last3days },
         },
         orderBy: { createdAt: "desc" },
         take: 5,
@@ -205,10 +211,10 @@ export async function GET() {
       notifications.push({
         id: `fb-${s.id}`,
         title: "FormBridge Submission",
-        description: `New form submission received on project`,
+        description: `New submission received on ${s.project?.name || "form project"}`,
         timestamp: s.createdAt.toISOString(),
         type: "formbridge",
-        href: `/admin/forms`,
+        href: `/admin/forms/${s.projectId}`,
       });
     }
 

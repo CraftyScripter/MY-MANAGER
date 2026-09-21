@@ -4,7 +4,7 @@ import type { LeadFolder, LeadFile } from "../../types";
 
 import DropdownSelect from "@/components/DropdownSelect";
 
-export default function CreateFileModal({ folderId, folders, onClose, onSuccess }: { folderId?: string | null; folders: LeadFolder[]; onClose: () => void; onSuccess: (file: LeadFile) => void }) {
+export default function CreateFileModal({ folderId, folders, onClose, onSuccess, onError }: { folderId?: string | null; folders: LeadFolder[]; onClose: () => void; onSuccess: (file: LeadFile) => void; onError?: (msg: string) => void }) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [selectedFolderId, setSelectedFolderId] = useState(folderId || "");
@@ -29,7 +29,7 @@ export default function CreateFileModal({ folderId, folders, onClose, onSuccess 
       const data = await res.json();
       onSuccess(data.file);
     } catch {
-      alert("Failed to create file");
+      onError?.("Failed to create file");
     } finally {
       setSaving(false);
     }

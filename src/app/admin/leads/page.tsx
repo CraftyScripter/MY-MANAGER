@@ -598,6 +598,7 @@ function LeadsPageInner() {
           folders={store.folders}
           onClose={() => store.setShowCreateFile(false)}
           onSuccess={(file) => { store.setShowCreateFile(false); store.loadTree(); window.dispatchEvent(new Event("leads-tree-refresh")); store.expandFile(file); store.setToast({ type: "success", message: "File created" }); }}
+          onError={(msg) => store.setToast({ type: "error", message: msg })}
         />
       )}
       {store.showCreateTab && store.expandedFile && (

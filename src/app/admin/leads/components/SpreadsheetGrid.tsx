@@ -549,9 +549,8 @@ export default function SpreadsheetGrid({
     const custom: GridColumn[] = list.map((colName, i) => {
       const col = columns[i];
       const typeTag = col?.type === "select" ? " ▾" : "";
-      const letter = getColumnLetter(i);
       return {
-        title: `${letter}${typeTag}${getSortIndicator(colName, sortField, sortOrder)}`,
+        title: `${colName}${typeTag}${getSortIndicator(colName, sortField, sortOrder)}`,
         width: Math.round(((col?.width) || 180) * zoom),
         id: colName,
       };

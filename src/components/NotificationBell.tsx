@@ -144,6 +144,14 @@ export default function NotificationBell() {
     } catch {}
   };
 
+  const clearAllNotifications = () => {
+    setNotifications([]);
+    setReadIds(new Set());
+    try {
+      localStorage.removeItem("pm_read_notifications");
+    } catch {}
+  };
+
   const markSingleAsRead = (id: string) => {
     const newSet = new Set(readIds);
     newSet.add(id);
@@ -262,15 +270,26 @@ export default function NotificationBell() {
                 </span>
               )}
             </div>
-            {unreadCount > 0 && (
-              <button
-                type="button"
-                onClick={markAllAsRead}
-                className="text-[11px] font-semibold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
-              >
-                Mark all read
-              </button>
-            )}
+            <div className="flex items-center gap-2">
+              {notifications.length > 0 && (
+                <button
+                  type="button"
+                  onClick={clearAllNotifications}
+                  className="text-[11px] font-semibold text-red-500 dark:text-red-400 hover:underline cursor-pointer"
+                >
+                  Clear All
+                </button>
+              )}
+              {unreadCount > 0 && (
+                <button
+                  type="button"
+                  onClick={markAllAsRead}
+                  className="text-[11px] font-semibold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
+                >
+                  Mark all read
+                </button>
+              )}
+            </div>
           </div>
 
           {/* List */}

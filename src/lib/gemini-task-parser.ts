@@ -174,15 +174,14 @@ ${membersContext || "(No other team members in workspace)"}
 "${input}"
 `.trim();
 
-  // Robust candidate models with fallback
+  // Robust candidate models with fallback (fast, high rate-limit, lowest-cost lite models first)
   const candidateModels = [
-    "gemini-3.5-flash",
-    "gemini-flash-latest",
-    "gemini-3.7-flash",
-    "gemini-3.8-flash",
-    "gemini-3.6-flash",
+    "gemini-1.5-flash-8b",
+    "gemini-1.5-flash",
+    "gemini-2.0-flash-lite",
+    "gemini-2.0-flash",
     "gemini-flash-lite-latest",
-    "gemini-pro-latest",
+    "gemini-flash-latest",
   ];
   let lastError: unknown = null;
 

@@ -27,17 +27,23 @@ export default function BackupRestorePage() {
   });
   const [showRestoreModal, setShowRestoreModal] = useState(false);
   const [toast, setToast] = useState<{ type: "success" | "error"; message: string } | null>(null);
+  const [backupMessage, setBackupMessage] = useState<string | null>(null);
 
   const fetchBackups = useCallback(async () => {
     try {
       setLoading(true);
+      setBackupMessage(null);
       const res = await fetch("/api/admin/google/backup");
       if (res.ok) {
         const data = await res.json();
         setBackups(data.backups || []);
+        if (data.message) {
+          setBackupMessage(data.message);
+        }
       }
     } catch (err) {
       console.error("Failed to fetch backups:", err);
+      setBackupMessage("Failed to connect to server");
     } finally {
       setLoading(false);
     }
@@ -216,6 +222,9 @@ export default function BackupRestorePage() {
               </svg>
             </div>
             <h3 className="text-sm font-bold text-zinc-900 dark:text-white">No backups yet</h3>
+            {backupMessage && (
+              <p className="text-xs text-amber-600 dark:text-amber-400 mt-1 mb-2 max-w-sm mx-auto">{backupMessage}</p>
+            )}
             <p className="text-xs text-zinc-500 mt-1 mb-4">Create your first backup to protect your data</p>
             <button
               onClick={createBackup}
