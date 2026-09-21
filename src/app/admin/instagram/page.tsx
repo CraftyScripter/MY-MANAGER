@@ -1963,12 +1963,12 @@ function InstagramContent() {
                 </p>
 
                 {/* Instagram Mockup Card */}
-                <div className="w-full max-w-[340px] bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-xl overflow-hidden text-zinc-900 dark:text-white">
+                <div className="w-full bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-xl overflow-hidden text-zinc-900 dark:text-white">
                   {/* Mockup Header */}
-                  <div className="p-3 flex items-center justify-between border-b border-zinc-100 dark:border-zinc-800">
-                    <div className="flex items-center gap-2">
-                      <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-amber-500 to-rose-500 p-[1.5px]">
-                        <div className="w-full h-full rounded-full bg-zinc-800 overflow-hidden flex items-center justify-center text-[10px] text-white font-bold">
+                  <div className="px-4 py-3 flex items-center justify-between border-b border-zinc-100 dark:border-zinc-800">
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-amber-500 to-rose-500 p-[1.5px]">
+                        <div className="w-full h-full rounded-full bg-zinc-800 overflow-hidden flex items-center justify-center text-xs text-white font-bold">
                           {currentAccount?.profilePictureUrl ? (
                             <img src={currentAccount.profilePictureUrl} alt="avatar" className="w-full h-full object-cover" />
                           ) : (
@@ -1976,15 +1976,18 @@ function InstagramContent() {
                           )}
                         </div>
                       </div>
-                      <span className="text-xs font-bold">
-                        {currentAccount?.username ? `@${currentAccount.username}` : "Not connected"}
-                      </span>
+                      <div className="flex flex-col">
+                        <span className="text-sm font-bold leading-tight">
+                          {currentAccount?.username ? `@${currentAccount.username}` : "Not connected"}
+                        </span>
+                        <span className="text-[10px] text-zinc-400">Sponsored</span>
+                      </div>
                     </div>
-                    <span className="text-zinc-400 text-xs font-bold tracking-widest">•••</span>
+                    <span className="text-zinc-400 text-sm font-bold tracking-widest">•••</span>
                   </div>
 
                   {/* Mockup Media Preview */}
-                  <div className="relative aspect-square bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center overflow-hidden group/preview">
+                  <div className="relative aspect-[4/5] bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center overflow-hidden group/preview">
                     {postMediaType === "CAROUSEL" && carouselUrls.length > 0 ? (
                       (() => {
                         const currentSlideUrl = carouselUrls[previewSlideIdx] || carouselUrls[0];
@@ -2077,38 +2080,38 @@ function InstagramContent() {
                         <img src={mediaUrlInput} alt="Preview" className="w-full h-full object-cover" />
                       )
                     ) : (
-                      <div className="text-center p-4 text-zinc-400">
-                        <svg className="w-8 h-8 mx-auto mb-1 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <div className="text-center p-6 text-zinc-400">
+                        <svg className="w-12 h-12 mx-auto mb-2 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                         </svg>
-                        <p className="text-[11px]">Media preview will appear here</p>
-                        <p className="text-[10px] text-zinc-500 mt-0.5">Upload a photo, video reel, or carousel on the left</p>
+                        <p className="text-xs font-medium">Media preview will appear here</p>
+                        <p className="text-[11px] text-zinc-500 mt-1">Upload a photo, video reel, or carousel on the left</p>
                       </div>
                     )}
                   </div>
 
 
                   {/* Mockup Icons Bar */}
-                  <div className="p-3 space-y-2">
+                  <div className="px-4 py-3 space-y-2.5">
                     <div className="flex items-center justify-between text-zinc-700 dark:text-zinc-200">
-                      <div className="flex items-center gap-3">
-                        <svg className="w-4 h-4 hover:text-rose-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <div className="flex items-center gap-4">
+                        <svg className="w-5 h-5 hover:text-rose-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                           <path strokeLinecap="round" strokeLinejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
                         </svg>
-                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                           <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                         </svg>
-                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                           <path strokeLinecap="round" strokeLinejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
                         </svg>
                       </div>
-                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
                       </svg>
                     </div>
 
-                    <p className="text-[11px] text-zinc-800 dark:text-zinc-200 line-clamp-4">
-                      <strong className="font-bold text-zinc-900 dark:text-white mr-1">
+                    <p className="text-xs text-zinc-800 dark:text-zinc-200 leading-relaxed">
+                      <strong className="font-bold text-zinc-900 dark:text-white mr-1.5">
                         {currentAccount?.username || ""}
                       </strong>
                       {captionInput || "Your caption text will appear here..."}
