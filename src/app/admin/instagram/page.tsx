@@ -434,6 +434,56 @@ function InstagramContent() {
   };
 
   // Process File Upload with Instant Local Preview & Server Upload
+  // Client-side image compression before upload (avoids 10MB body limit)
+  const compressImageIfNeeded = async (file: File): Promise<File> => {
+    const isVideo = file.type.startsWith("video/") || Boolean(file.name.match(/\.(mp4|mov|webm)$/i));
+    if (isVideo || !file.type.startsWith("image/")) return file;
+    if (file.size <= 4 * 1024 * 1024) return file; // Already under 4MB
+
+    console.log(`[Client] Compressing ${file.name}: ${(file.size / 1024 / 1024).toFixed(1)}MB`);
+
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        let { width, height } = img;
+
+        // Scale down if larger than 1080px on any side
+        const MAX = 1080;
+        if (width > MAX || height > MAX) {
+          const ratio = Math.min(MAX / width, MAX / height);
+          width = Math.round(width * ratio);
+          height = Math.round(height * ratio);
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+
+        const ctx = canvas.getContext("2d")!;
+        ctx.drawImage(img, 0, 0, width, height);
+
+        canvas.toBlob(
+          (blob) => {
+            if (blob) {
+              const compressed = new File([blob], file.name.replace(/\.[^.]+$/, ".jpg"), {
+                type: "image/jpeg",
+                lastModified: Date.now(),
+              });
+              console.log(`[Client] Compressed to: ${(compressed.size / 1024 / 1024).toFixed(1)}MB (${width}x${height})`);
+              resolve(compressed);
+            } else {
+              resolve(file);
+            }
+          },
+          "image/jpeg",
+          0.85
+        );
+      };
+      img.onerror = () => resolve(file);
+      img.src = URL.createObjectURL(file);
+    });
+  };
+
   const processUploadedFiles = async (files: FileList | File[]) => {
     const fileArray = Array.from(files);
     if (fileArray.length === 0) return;
@@ -475,8 +525,11 @@ function InstagramContent() {
     // 2. Upload to server in background
     try {
       for (let i = 0; i < fileArray.length; i++) {
-        const file = fileArray[i];
+        const rawFile = fileArray[i];
         const item = newItems[i];
+
+        // Compress large images on client side before uploading
+        const file = await compressImageIfNeeded(rawFile);
 
         const formData = new FormData();
         formData.append("file", file);

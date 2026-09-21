@@ -6,6 +6,11 @@ const nextConfig: NextConfig = {
     'polar-ease-citations-brokers.trycloudflare.com',
     '*.trycloudflare.com',
   ],
+  experimental: {
+    serverActions: {
+      bodySizeLimit: '100mb',
+    },
+  },
 };
 
 export default nextConfig;
